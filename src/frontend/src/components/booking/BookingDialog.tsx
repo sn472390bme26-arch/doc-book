@@ -1,4 +1,3 @@
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,6 +12,8 @@ import {
   Hash,
   IndianRupee,
   Loader2,
+  MapPin,
+  Stethoscope,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -45,7 +46,6 @@ export default function BookingDialog({
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedSession, setSelectedSession] = useState<SessionType | "">("");
   const [paying, setPaying] = useState(false);
-  // booking id tracked via store
   const [tokenNumber, setTokenNumber] = useState(0);
 
   const availableDates = useMemo(() => getAvailableDates(), []);
@@ -98,7 +98,6 @@ export default function BookingDialog({
         selectedSession as SessionType,
         tokenNumber,
       );
-
       setPaying(false);
       setStep("success");
     }, 1800);
@@ -120,43 +119,62 @@ export default function BookingDialog({
     });
   }
 
+  function getDayName(d: string) {
+    return new Date(`${d}T00:00:00`).toLocaleDateString("en-IN", {
+      weekday: "short",
+    });
+  }
+  function getDayNum(d: string) {
+    return new Date(`${d}T00:00:00`).getDate();
+  }
+  function getMonth(d: string) {
+    return new Date(`${d}T00:00:00`).toLocaleDateString("en-IN", {
+      month: "short",
+    });
+  }
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-md" data-ocid="booking.dialog">
         <DialogHeader>
-          <DialogTitle>
-            {step === "success"
-              ? "Booking Confirmed! 🎉"
-              : `Book with ${doctor.name}`}
+          <DialogTitle className="text-center">
+            {step === "success" ? "Booking Confirmed!" : "Book Appointment"}
           </DialogTitle>
         </DialogHeader>
 
         {/* Step: Date */}
         {step === "date" && (
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Select appointment date (next 5 days)
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {availableDates.map((date, i) => (
-                <Button
-                  key={date}
-                  variant="outline"
-                  className="h-16 flex-col gap-1 hover:bg-primary hover:text-primary-foreground"
-                  onClick={() => handleDateSelect(date)}
-                  data-ocid="booking.button"
-                >
-                  <Calendar className="w-4 h-4" />
-                  <span className="text-sm font-medium">
-                    {formatDate(date)}
-                  </span>
-                  {i === 0 && (
-                    <Badge className="text-[10px] h-4 bg-green-100 text-green-700 border-0">
-                      Today
-                    </Badge>
-                  )}
-                </Button>
-              ))}
+          <div className="space-y-4">
+            <div className="bg-gray-50 rounded-xl p-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+                1. Select Date
+              </p>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {availableDates.map((date, i) => (
+                  <button
+                    key={date}
+                    type="button"
+                    onClick={() => handleDateSelect(date)}
+                    className={`flex flex-col items-center px-4 py-3 rounded-xl border-2 shrink-0 transition-all ${"border-gray-200 hover:border-teal-300 hover:bg-teal-50"}`}
+                    data-ocid="booking.button"
+                  >
+                    <span className="text-xs text-gray-500">
+                      {getDayName(date)}
+                    </span>
+                    <span className="text-xl font-bold text-gray-900">
+                      {getDayNum(date)}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {getMonth(date)}
+                    </span>
+                    {i === 0 && (
+                      <span className="text-[10px] bg-teal-100 text-teal-700 px-1.5 py-0.5 rounded-full mt-1">
+                        Today
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -164,38 +182,61 @@ export default function BookingDialog({
         {/* Step: Session */}
         {step === "session" && (
           <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Date: <strong>{formatDate(selectedDate)}</strong> · Select session
-            </p>
-            <div className="space-y-2">
-              {(Object.keys(SESSION_TIMES) as SessionType[]).map((session) => {
-                if (!doctor.sessions.includes(session)) return null;
-                const available = isSessionAvailable(selectedDate, session);
-                const booked = getBookedCount(selectedDate, session);
-                const full = booked >= doctor.tokensPerSession;
-                return (
-                  <Button
-                    key={session}
-                    variant="outline"
-                    className={`w-full justify-between h-14 ${!available || full ? "opacity-40 cursor-not-allowed" : "hover:bg-primary hover:text-primary-foreground"}`}
-                    disabled={!available || full}
-                    onClick={() => handleSessionSelect(session)}
-                    data-ocid="booking.button"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      <span>{SESSION_TIMES[session].label}</span>
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {full
-                        ? "Full"
-                        : !available
-                          ? "Ended"
-                          : `${booked}/${doctor.tokensPerSession} booked`}
-                    </Badge>
-                  </Button>
-                );
-              })}
+            <div className="bg-gray-50 rounded-xl p-4">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                2. Select Session
+              </p>
+              <p className="text-xs text-gray-400 mb-3">
+                {formatDate(selectedDate)}
+              </p>
+              <div className="space-y-2">
+                {(Object.keys(SESSION_TIMES) as SessionType[]).map(
+                  (session) => {
+                    if (!doctor.sessions.includes(session)) return null;
+                    const available = isSessionAvailable(selectedDate, session);
+                    const booked = getBookedCount(selectedDate, session);
+                    const full = booked >= doctor.tokensPerSession;
+                    return (
+                      <button
+                        key={session}
+                        type="button"
+                        className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                          !available || full
+                            ? "border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed"
+                            : "border-gray-200 hover:border-teal-500 hover:bg-teal-50"
+                        }`}
+                        disabled={!available || full}
+                        onClick={() => handleSessionSelect(session)}
+                        data-ocid="booking.button"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-gray-400" />
+                            <span className="font-medium text-sm">
+                              {SESSION_TIMES[session].label}
+                            </span>
+                          </div>
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full ${
+                              full
+                                ? "bg-red-100 text-red-600"
+                                : !available
+                                  ? "bg-gray-100 text-gray-500"
+                                  : "bg-teal-100 text-teal-700"
+                            }`}
+                          >
+                            {full
+                              ? "Full"
+                              : !available
+                                ? "Ended"
+                                : `${booked} / ${doctor.tokensPerSession} Booked`}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  },
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -203,66 +244,61 @@ export default function BookingDialog({
         {/* Step: Token preview */}
         {step === "token" && (
           <div className="space-y-4">
-            <div className="bg-muted rounded-xl p-4 space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Doctor</span>
-                <span className="font-medium">{doctor.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Date</span>
-                <span className="font-medium">{formatDate(selectedDate)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Session</span>
-                <span className="font-medium">
-                  {SESSION_TIMES[selectedSession as SessionType]?.label}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Already booked</span>
-                <span className="font-medium">{tokenNumber - 1} tokens</span>
+            <div className="bg-teal-50 border border-teal-200 rounded-2xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-teal-600 font-semibold uppercase tracking-wide">
+                    Your Token
+                  </p>
+                  <p className="text-sm text-gray-600 mt-1">{doctor.name}</p>
+                  <p className="text-xs text-gray-400">
+                    {formatDate(selectedDate)} ·{" "}
+                    {SESSION_TIMES[selectedSession as SessionType]?.label}
+                  </p>
+                  <div className="flex items-center gap-1 mt-2 text-gray-700 font-semibold">
+                    <IndianRupee className="w-3.5 h-3.5 text-teal-600" />
+                    {doctor.price}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleConfirm}
+                  className="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded-full text-sm font-semibold transition-colors"
+                  data-ocid="booking.confirm_button"
+                >
+                  Generate Token →
+                </button>
               </div>
             </div>
-            <div className="border-2 border-primary rounded-xl p-6 text-center">
-              <Hash className="w-6 h-6 text-primary mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">Your Token Number</p>
-              <p className="text-5xl font-bold text-primary mt-1">
+            <div className="border-2 border-teal-300 rounded-xl p-6 text-center">
+              <Hash className="w-6 h-6 text-teal-500 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">Your Token Number</p>
+              <p className="text-6xl font-bold text-teal-600 mt-1">
                 {tokenNumber}
               </p>
             </div>
-            <Button
-              className="w-full"
-              onClick={handleConfirm}
-              data-ocid="booking.confirm_button"
-            >
-              Confirm & Proceed to Payment
-            </Button>
           </div>
         )}
 
         {/* Step: Payment */}
         {step === "payment" && (
           <div className="space-y-4 text-center">
-            <div className="bg-muted rounded-xl p-4">
-              <p className="text-sm text-muted-foreground mb-1">
-                Amount to Pay
-              </p>
-              <div className="flex items-center justify-center gap-1 text-3xl font-bold text-foreground">
+            <div className="bg-gray-50 rounded-xl p-4">
+              <p className="text-sm text-gray-500 mb-1">Amount to Pay</p>
+              <div className="flex items-center justify-center gap-1 text-3xl font-bold text-gray-900">
                 <IndianRupee className="w-6 h-6" />
                 {doctor.price}
               </div>
             </div>
             {paying ? (
               <div className="py-4">
-                <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
+                <Loader2 className="w-8 h-8 animate-spin text-teal-500 mx-auto mb-3" />
                 <p className="text-sm font-medium">Processing Payment...</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Please wait
-                </p>
+                <p className="text-xs text-gray-400 mt-1">Please wait</p>
               </div>
             ) : (
               <Button
-                className="w-full text-base h-12"
+                className="w-full text-base h-12 bg-teal-500 hover:bg-teal-600 rounded-full"
                 onClick={handlePay}
                 data-ocid="booking.primary_button"
               >
@@ -275,49 +311,61 @@ export default function BookingDialog({
 
         {/* Step: Success */}
         {step === "success" && (
-          <div
-            className="text-center space-y-4"
-            data-ocid="booking.success_state"
-          >
-            <CheckCircle2 className="w-16 h-16 text-status-green mx-auto" />
-            <div>
-              <p className="font-semibold text-lg">Payment Successful!</p>
-              <p className="text-muted-foreground text-sm mt-1">
-                Your appointment has been confirmed
-              </p>
+          <div className="text-center" data-ocid="booking.success_state">
+            {/* Green top band */}
+            <div className="h-16 bg-green-500 rounded-t-2xl -mx-6 -mt-2 mb-0 relative flex items-end justify-center pb-0">
+              <div className="w-16 h-16 bg-white border-4 border-green-500 rounded-full flex items-center justify-center translate-y-8 shadow-md">
+                <CheckCircle2 className="w-8 h-8 text-green-500" />
+              </div>
             </div>
-            <div className="border-2 border-status-green rounded-xl p-5">
-              <p className="text-xs text-muted-foreground">Your Token Number</p>
-              <p
-                className="text-5xl font-bold"
-                style={{ color: "oklch(0.60 0.15 145)" }}
-              >
-                {tokenNumber}
+            <div className="mt-12 space-y-3">
+              <h2 className="text-xl font-bold text-gray-900">
+                Booking Confirmed!
+              </h2>
+              <p className="text-xs font-semibold text-teal-600 tracking-widest uppercase">
+                Your Token Number
               </p>
-              <p className="text-xs text-muted-foreground mt-2">
-                {doctor.name} · {formatDate(selectedDate)} ·{" "}
-                {SESSION_TIMES[selectedSession as SessionType]?.label}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={handleClose}
-                data-ocid="booking.close_button"
-              >
-                Close
-              </Button>
-              <Button
-                className="flex-1"
-                onClick={() => {
-                  handleClose();
-                  toast.success("Navigate to My Tokens to track!");
-                }}
-                data-ocid="booking.secondary_button"
-              >
-                View My Tokens
-              </Button>
+              <p className="text-6xl font-bold text-gray-900">{tokenNumber}</p>
+              <div className="grid grid-cols-2 gap-3 text-sm text-left mt-4">
+                <div className="flex items-center gap-2 text-gray-500">
+                  <Stethoscope className="w-4 h-4 text-teal-500 shrink-0" />
+                  <span>{doctor.name}</span>
+                </div>
+                <div className="flex items-center gap-2 text-gray-500">
+                  <MapPin className="w-4 h-4 text-teal-500 shrink-0" />
+                  <span>{hospital.name}</span>
+                </div>
+                <div className="flex items-center gap-2 text-gray-500">
+                  <Calendar className="w-4 h-4 text-teal-500 shrink-0" />
+                  <span>{formatDate(selectedDate)}</span>
+                </div>
+                <div className="flex items-center gap-2 text-gray-500">
+                  <Clock className="w-4 h-4 text-teal-500 shrink-0" />
+                  <span>
+                    {SESSION_TIMES[selectedSession as SessionType]?.label}
+                  </span>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 rounded-full"
+                  onClick={handleClose}
+                  data-ocid="booking.close_button"
+                >
+                  Back to Home
+                </Button>
+                <Button
+                  className="flex-1 bg-teal-500 hover:bg-teal-600 rounded-full"
+                  onClick={() => {
+                    handleClose();
+                    toast.success("Navigate to My Bookings to track!");
+                  }}
+                  data-ocid="booking.secondary_button"
+                >
+                  Track Queue Live
+                </Button>
+              </div>
             </div>
           </div>
         )}

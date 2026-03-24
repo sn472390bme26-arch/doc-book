@@ -1,18 +1,12 @@
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Bell, ChevronDown, Cross, LogOut, User } from "lucide-react";
+import { BookOpen, Hospital, LogOut, Stethoscope, User } from "lucide-react";
 import { useStore } from "../../context/StoreContext";
 import { DOCTORS } from "../../data/seed";
 import { useRouter } from "../../router/RouterContext";
 
 export default function TopNav() {
-  const { user, logout, bookings } = useStore();
-  const { navigate } = useRouter();
+  const { user, logout } = useStore();
+  const { navigate, route } = useRouter();
 
   const displayName =
     user?.role === "patient"
@@ -20,138 +14,104 @@ export default function TopNav() {
       : (DOCTORS.find((d) => d.code === (user as { code: string })?.code)
           ?.name ?? "Doctor");
 
-  const pendingNotifs =
-    user?.role === "patient"
-      ? bookings.filter((b) => b.patientId === (user as { id: string }).id)
-          .length
-      : 0;
-
-  function handleLogout() {
-    logout();
-  }
+  const isPatient = user?.role === "patient";
+  const isDoctor = user?.role === "doctor";
 
   return (
-    <header className="sticky top-0 z-50 bg-card border-b border-border shadow-xs">
-      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-50 bg-white border-b border-gray-200 px-6 py-3">
+      <div className="max-w-7xl mx-auto flex items-center gap-6">
+        {/* Logo + Wordmark */}
         <button
           type="button"
           className="flex items-center gap-2 shrink-0"
           onClick={() =>
             navigate(
-              user?.role === "doctor"
-                ? { path: "/doctor" }
-                : { path: "/patient/hospitals" },
+              isDoctor ? { path: "/doctor" } : { path: "/patient/hospitals" },
             )
           }
           data-ocid="nav.link"
         >
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <Cross
-              className="w-4 h-4 text-primary-foreground"
-              strokeWidth={2.5}
-            />
+          <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center">
+            <Stethoscope className="w-4 h-4 text-white" />
           </div>
-          <span className="text-lg font-bold text-foreground">MediToken</span>
+          <span className="text-base">
+            <span className="font-bold text-gray-900">Doctor</span>
+            <span className="font-bold text-teal-500"> Booked</span>
+          </span>
         </button>
 
-        {user?.role === "patient" && (
-          <nav className="hidden md:flex items-center gap-1">
+        {/* Patient nav links */}
+        {isPatient && (
+          <nav className="flex items-center gap-1 ml-2">
             <button
               type="button"
               onClick={() => navigate({ path: "/patient/hospitals" })}
-              className="px-3 py-1.5 text-sm font-medium rounded-md hover:bg-accent transition-colors"
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                route.path === "/patient/hospitals" ||
+                route.path === "/patient/hospital"
+                  ? "text-teal-600 bg-teal-50"
+                  : "text-gray-600 hover:text-teal-600 hover:bg-teal-50"
+              }`}
               data-ocid="nav.link"
             >
+              <Hospital className="w-4 h-4" />
               Hospitals
             </button>
             <button
               type="button"
               onClick={() => navigate({ path: "/patient/tokens" })}
-              className="px-3 py-1.5 text-sm font-medium rounded-md hover:bg-accent transition-colors"
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                route.path === "/patient/tokens" ||
+                route.path === "/patient/track"
+                  ? "text-teal-600 bg-teal-50"
+                  : "text-gray-600 hover:text-teal-600 hover:bg-teal-50"
+              }`}
               data-ocid="nav.link"
             >
-              My Tokens
+              <BookOpen className="w-4 h-4" />
+              My Bookings
             </button>
           </nav>
         )}
 
-        <div className="flex items-center gap-2 ml-auto">
-          {user?.role === "patient" && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative"
-              data-ocid="nav.link"
+        {/* Doctor nav tabs */}
+        {isDoctor && (
+          <nav className="flex items-center gap-1 ml-2">
+            <button
+              type="button"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-teal-100 text-teal-700 rounded-full transition-colors"
+              data-ocid="nav.tab"
             >
-              <Bell className="w-5 h-5" />
-              {pendingNotifs > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-status-red text-white text-[10px] flex items-center justify-center">
-                  {pendingNotifs}
-                </span>
-              )}
-            </Button>
-          )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="flex items-center gap-2"
-                data-ocid="nav.dropdown_menu"
-              >
-                <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center">
-                  <User className="w-4 h-4 text-primary-foreground" />
-                </div>
-                <span className="hidden sm:block text-sm font-medium max-w-[120px] truncate">
-                  {displayName}
-                </span>
-                <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem
-                onClick={handleLogout}
-                className="text-destructive focus:text-destructive"
-                data-ocid="nav.button"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+              Dashboard
+            </button>
+          </nav>
+        )}
 
-      <div className="bg-primary">
-        <div className="max-w-7xl mx-auto px-4 h-9 flex items-center gap-6">
-          {user?.role === "patient" ? (
-            <>
-              <button
-                type="button"
-                onClick={() => navigate({ path: "/patient/hospitals" })}
-                className="text-xs font-medium text-primary-foreground/80 hover:text-primary-foreground transition-colors"
-                data-ocid="nav.link"
-              >
-                Find a Hospital
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate({ path: "/patient/tokens" })}
-                className="text-xs font-medium text-primary-foreground/80 hover:text-primary-foreground transition-colors"
-                data-ocid="nav.link"
-              >
-                My Appointments
-              </button>
-            </>
-          ) : (
-            <>
-              <span className="text-xs font-medium text-primary-foreground/80">
-                Doctor Portal
-              </span>
-              <span className="text-xs text-primary-foreground/60">
-                Manage tokens & profile
-              </span>
-            </>
-          )}
+        {/* Right side: user info + logout */}
+        <div className="ml-auto flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center">
+              <User className="w-4 h-4 text-teal-600" />
+            </div>
+            <div className="hidden sm:block">
+              <p className="text-sm font-semibold text-gray-900 leading-none">
+                {displayName}
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {isPatient ? "Patient" : "Doctor"}
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-gray-500 hover:text-red-600 hover:bg-red-50 gap-1.5"
+            onClick={logout}
+            data-ocid="nav.button"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline text-sm">Logout</span>
+          </Button>
         </div>
       </div>
     </header>

@@ -54,18 +54,17 @@ import type { PrioritySlotState, SessionType, TokenStatus } from "../../types";
 const TOKEN_CLASSES: Record<string, string> = {
   white: "token-white cursor-pointer hover:opacity-80",
   red: "token-red cursor-pointer hover:opacity-80",
-  orange: "token-orange cursor-pointer animate-pulse",
-  yellow: "token-yellow cursor-pointer animate-pulse-ring",
+  orange: "token-orange cursor-pointer",
+  yellow: "token-yellow cursor-pointer",
   green: "token-green",
-  unvisited:
-    "bg-muted border-2 border-muted-foreground/20 text-muted-foreground",
+  unvisited: "bg-gray-100 border-2 border-gray-200 text-gray-400",
 };
 
 const PRIORITY_STATUS_CLASSES: Record<string, string> = {
   waiting:
-    "bg-blue-100 text-blue-700 border-blue-200 cursor-pointer hover:opacity-80",
-  ongoing: "bg-orange-100 text-orange-700 border-orange-200 cursor-pointer",
-  completed: "bg-green-100 text-green-700 border-green-200 cursor-pointer",
+    "bg-blue-50 text-blue-700 border-blue-200 cursor-pointer hover:bg-blue-100",
+  ongoing: "bg-orange-50 text-orange-700 border-orange-200 cursor-pointer",
+  completed: "bg-green-50 text-green-700 border-green-200 cursor-pointer",
 };
 
 export default function DoctorDashboard() {
@@ -85,7 +84,6 @@ export default function DoctorDashboard() {
   const doctorUser = user as { doctorId: string; code: string };
   const doctor = doctors.find((d) => d.id === doctorUser.doctorId)!;
 
-  // Profile form state
   const [profileForm, setProfileForm] = useState({
     name: doctor?.name ?? "",
     specialty: doctor?.specialty ?? "",
@@ -95,7 +93,6 @@ export default function DoctorDashboard() {
     sessions: doctor?.sessions ?? ([] as SessionType[]),
   });
 
-  // Token regulator state
   const today = new Date().toISOString().split("T")[0];
   const [regDate, setRegDate] = useState(today);
   const [regSession, setRegSession] = useState<SessionType>(
@@ -193,7 +190,11 @@ export default function DoctorDashboard() {
       elements.push(
         <button
           key={n}
-          className={`w-11 h-11 rounded-lg flex items-center justify-center text-sm font-bold transition-all select-none ${TOKEN_CLASSES[st] ?? "token-white"} ${isClickable ? "cursor-pointer hover:scale-110" : ""} ${st === "orange" ? "scale-110 shadow-lg" : ""}`}
+          className={`w-14 h-14 rounded-xl flex items-center justify-center text-sm font-semibold border-2 transition-all select-none ${
+            TOKEN_CLASSES[st] ?? "token-white"
+          } ${isClickable ? "cursor-pointer hover:scale-110" : ""} ${
+            st === "orange" ? "scale-110 shadow-lg" : ""
+          }`}
           type="button"
           disabled={!isClickable}
           onClick={() => handleTokenClick(n)}
@@ -213,7 +214,6 @@ export default function DoctorDashboard() {
           {n}
         </button>,
       );
-      // Add priority slot after every 10 tokens
       if (n % 10 === 0 && n < maxTokens) {
         const slotIndex = n / 10;
         const ps = tokenState?.prioritySlots?.[slotIndex] ?? {
@@ -224,7 +224,9 @@ export default function DoctorDashboard() {
           <div key={`ps_${slotIndex}`} className="w-full">
             <button
               type="button"
-              className={`w-full py-2.5 px-4 rounded-xl border text-xs font-semibold text-left flex items-center justify-between transition-all ${PRIORITY_STATUS_CLASSES[ps.status]}`}
+              className={`w-full py-2.5 px-4 rounded-xl border-2 border-dashed text-xs font-semibold text-left flex items-center justify-between transition-all ${
+                PRIORITY_STATUS_CLASSES[ps.status]
+              }`}
               onClick={() => openPriorityDialog(slotIndex)}
               data-ocid="tokens.toggle"
             >
@@ -232,7 +234,13 @@ export default function DoctorDashboard() {
                 ⚡ Priority Slot P{slotIndex} — Emergency / Urgent Visit
               </span>
               <Badge
-                className={`text-[10px] border-0 ${ps.status === "completed" ? "bg-green-200 text-green-800" : ps.status === "ongoing" ? "bg-orange-200 text-orange-800" : "bg-blue-200 text-blue-800"}`}
+                className={`text-[10px] border-0 ${
+                  ps.status === "completed"
+                    ? "bg-green-200 text-green-800"
+                    : ps.status === "ongoing"
+                      ? "bg-orange-200 text-orange-800"
+                      : "bg-blue-200 text-blue-800"
+                }`}
               >
                 {ps.status === "completed"
                   ? "Completed"
@@ -250,10 +258,13 @@ export default function DoctorDashboard() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
+      {/* Title card */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Doctor Dashboard</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Welcome, {doctor?.name} ·{" "}
+        <h2 className="text-2xl font-bold text-gray-900">
+          Token Control Panel
+        </h2>
+        <p className="text-gray-500 text-sm mt-1">
+          Manage live patient queue for your sessions — {doctor?.name} ·{" "}
           {HOSPITALS.find((h) => h.id === doctor?.hospitalId)?.name}
         </p>
       </div>
@@ -274,11 +285,11 @@ export default function DoctorDashboard() {
         <TabsContent value="regulator">
           <div className="space-y-6">
             {/* Session selectors */}
-            <Card>
+            <Card className="border border-gray-100 shadow-sm">
               <CardContent className="p-4">
                 <div className="flex flex-wrap items-center gap-4">
                   <div className="space-y-1">
-                    <Label className="text-xs">Date</Label>
+                    <Label className="text-xs text-gray-500">Date</Label>
                     <Select value={regDate} onValueChange={setRegDate}>
                       <SelectTrigger className="w-44" data-ocid="doctor.select">
                         <SelectValue />
@@ -300,7 +311,7 @@ export default function DoctorDashboard() {
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Session</Label>
+                    <Label className="text-xs text-gray-500">Session</Label>
                     <Select
                       value={regSession}
                       onValueChange={(v) => setRegSession(v as SessionType)}
@@ -317,35 +328,38 @@ export default function DoctorDashboard() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="ml-auto flex items-center gap-2">
+                  <div className="ml-auto">
                     {cancelled ? (
-                      <Badge className="bg-red-100 text-red-700 border-0">
+                      <span className="bg-red-100 text-red-700 text-xs font-medium px-3 py-1 rounded-full">
                         Session Cancelled
-                      </Badge>
+                      </span>
                     ) : isClosed ? (
-                      <Badge className="bg-muted text-muted-foreground">
+                      <span className="bg-gray-100 text-gray-600 text-xs font-medium px-3 py-1 rounded-full">
                         Session Closed
-                      </Badge>
+                      </span>
                     ) : (
-                      <Badge className="bg-green-100 text-green-700 border-0">
+                      <span className="bg-green-100 text-green-700 text-xs font-medium px-3 py-1 rounded-full">
                         Session Active
-                      </Badge>
+                      </span>
                     )}
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Token Grid */}
-            <Card>
+            {/* Token Grid Card */}
+            <Card className="border border-gray-100 shadow-sm">
               <CardHeader>
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <CardTitle className="text-base">
-                    <Clock className="w-4 h-4 inline mr-2" />
+                    <Clock className="w-4 h-4 inline mr-2 text-teal-500" />
                     {SESSION_TIMES[regSession]?.label} —{" "}
                     {new Date(`${regDate}T00:00:00`).toLocaleDateString(
                       "en-IN",
-                      { day: "numeric", month: "long" },
+                      {
+                        day: "numeric",
+                        month: "long",
+                      },
                     )}
                   </CardTitle>
                   <div className="flex items-center gap-2">
@@ -353,10 +367,11 @@ export default function DoctorDashboard() {
                       <Button
                         size="sm"
                         variant="outline"
+                        className="border-green-300 text-green-700 hover:bg-green-50"
                         onClick={handleCompleteToken}
                         data-ocid="tokens.primary_button"
                       >
-                        <CheckCircle className="w-3.5 h-3.5 mr-1.5 text-status-green" />
+                        <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
                         Complete #{currentToken}
                       </Button>
                     )}
@@ -365,11 +380,12 @@ export default function DoctorDashboard() {
                         <AlertDialogTrigger asChild>
                           <Button
                             size="sm"
-                            variant="destructive"
+                            variant="outline"
+                            className="border-red-300 text-red-600 hover:bg-red-50"
                             data-ocid="tokens.close_button"
                           >
                             <XCircle className="w-3.5 h-3.5 mr-1.5" />
-                            Close Session
+                            End Session
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent data-ocid="tokens.dialog">
@@ -403,7 +419,7 @@ export default function DoctorDashboard() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                            className="border-red-300 text-red-600 hover:bg-red-50"
                             data-ocid="tokens.delete_button"
                           >
                             <AlertTriangle className="w-3.5 h-3.5 mr-1.5" />
@@ -442,10 +458,10 @@ export default function DoctorDashboard() {
               <CardContent>
                 {cancelled ? (
                   <div
-                    className="text-center py-10 text-muted-foreground"
+                    className="text-center py-10 text-gray-400"
                     data-ocid="tokens.empty_state"
                   >
-                    <XCircle className="w-10 h-10 mx-auto mb-3 text-destructive opacity-50" />
+                    <XCircle className="w-10 h-10 mx-auto mb-3 text-red-400 opacity-50" />
                     <p className="font-medium">
                       This session has been cancelled
                     </p>
@@ -455,26 +471,28 @@ export default function DoctorDashboard() {
                   </div>
                 ) : (
                   <>
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {renderTokenGrid()}
-                    </div>
-
                     {/* Legend */}
-                    <div className="flex flex-wrap gap-3 pt-4 border-t border-border">
-                      {[
-                        ["white", "Unbooked"],
-                        ["red", "Booked"],
-                        ["orange", "In Progress"],
-                        ["yellow", "Next"],
-                        ["green", "Done"],
-                      ].map(([s, label]) => (
-                        <div key={s} className="flex items-center gap-1.5">
-                          <div className={`w-5 h-5 rounded token-${s}`} />
-                          <span className="text-xs text-muted-foreground">
-                            {label}
-                          </span>
+                    <div className="flex flex-wrap gap-4 mb-4">
+                      {(
+                        [
+                          ["#e2e8f0", "Available"],
+                          ["#ef4444", "Booked"],
+                          ["#f97316", "Ongoing/Skipped"],
+                          ["#fbbf24", "Next Up"],
+                          ["#22c55e", "Completed"],
+                        ] as [string, string][]
+                      ).map(([color, label]) => (
+                        <div key={label} className="flex items-center gap-1.5">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: color }}
+                          />
+                          <span className="text-xs text-gray-500">{label}</span>
                         </div>
                       ))}
+                    </div>
+                    <div className="grid grid-cols-10 gap-2">
+                      {renderTokenGrid()}
                     </div>
                   </>
                 )}
@@ -485,7 +503,7 @@ export default function DoctorDashboard() {
 
         {/* Profile Tab */}
         <TabsContent value="profile">
-          <Card>
+          <Card className="border border-gray-100 shadow-sm">
             <CardHeader>
               <CardTitle>My Profile</CardTitle>
             </CardHeader>
@@ -578,7 +596,7 @@ export default function DoctorDashboard() {
                 </div>
               </div>
               <Button
-                className="mt-6"
+                className="mt-6 bg-teal-500 hover:bg-teal-600"
                 onClick={handleSaveProfile}
                 data-ocid="profile.save_button"
               >
@@ -602,7 +620,7 @@ export default function DoctorDashboard() {
               Priority Slot P{priorityDialog.index} — Urgent Visit
             </DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-gray-500">
             Update the status for this priority slot.
           </p>
           <div className="grid grid-cols-3 gap-3 py-2">
@@ -646,11 +664,11 @@ export default function DoctorDashboard() {
         </DialogContent>
       </Dialog>
 
-      <footer className="mt-12 pt-6 border-t border-border text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()}. Built with ❤️ using{" "}
+      <footer className="mt-12 pt-6 border-t border-gray-100 text-center text-xs text-gray-400">
+        &copy; {new Date().getFullYear()}. Built with ❤️ using{" "}
         <a
           href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
-          className="underline hover:text-foreground"
+          className="underline hover:text-gray-600"
           target="_blank"
           rel="noopener noreferrer"
         >

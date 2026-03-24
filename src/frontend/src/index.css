@@ -7,28 +7,28 @@
 @layer base {
   :root {
     --radius: 0.75rem;
-    /* Background: #EEF3F8 -> oklch */
-    --background: 0.952 0.018 234;
-    --foreground: 0.22 0.03 240;
+    /* Background: soft gray */
+    --background: 0.975 0.005 200;
+    --foreground: 0.18 0.025 240;
     --card: 1 0 0;
-    --card-foreground: 0.22 0.03 240;
+    --card-foreground: 0.18 0.025 240;
     --popover: 1 0 0;
-    --popover-foreground: 0.22 0.03 240;
-    /* Primary blue #2F6FAF */
-    --primary: 0.48 0.135 234;
+    --popover-foreground: 0.18 0.025 240;
+    /* Primary teal #14B8A6 */
+    --primary: 0.65 0.13 185;
     --primary-foreground: 1 0 0;
-    --secondary: 0.92 0.03 234;
-    --secondary-foreground: 0.35 0.08 234;
-    --muted: 0.94 0.015 234;
-    --muted-foreground: 0.52 0.04 234;
-    --accent: 0.9 0.04 234;
-    --accent-foreground: 0.35 0.08 234;
-    /* Destructive Red #D64545 */
+    --secondary: 0.94 0.02 185;
+    --secondary-foreground: 0.35 0.08 185;
+    --muted: 0.95 0.01 200;
+    --muted-foreground: 0.52 0.03 220;
+    --accent: 0.92 0.04 185;
+    --accent-foreground: 0.35 0.08 185;
+    /* Destructive Red */
     --destructive: 0.55 0.2 25;
     --destructive-foreground: 1 0 0;
-    --border: 0.88 0.025 234;
-    --input: 0.9 0.02 234;
-    --ring: 0.48 0.135 234;
+    --border: 0.9 0.015 200;
+    --input: 0.92 0.01 200;
+    --ring: 0.65 0.13 185;
     /* Status tokens */
     --token-white: 1 0 0;
     --token-red: 0.55 0.2 25;
@@ -36,19 +36,19 @@
     --token-yellow: 0.85 0.16 88;
     --token-green: 0.6 0.15 145;
     /* Chart */
-    --chart-1: 0.48 0.135 234;
+    --chart-1: 0.65 0.13 185;
     --chart-2: 0.6 0.15 145;
     --chart-3: 0.72 0.16 55;
     --chart-4: 0.55 0.2 25;
     --chart-5: 0.85 0.16 88;
-    --sidebar: 0.98 0.01 234;
-    --sidebar-foreground: 0.22 0.03 240;
-    --sidebar-primary: 0.48 0.135 234;
+    --sidebar: 0.98 0.01 200;
+    --sidebar-foreground: 0.18 0.025 240;
+    --sidebar-primary: 0.65 0.13 185;
     --sidebar-primary-foreground: 1 0 0;
-    --sidebar-accent: 0.92 0.03 234;
-    --sidebar-accent-foreground: 0.35 0.08 234;
-    --sidebar-border: 0.88 0.025 234;
-    --sidebar-ring: 0.48 0.135 234;
+    --sidebar-accent: 0.92 0.03 185;
+    --sidebar-accent-foreground: 0.35 0.08 185;
+    --sidebar-border: 0.9 0.015 200;
+    --sidebar-ring: 0.65 0.13 185;
     /* Admin sidebar: dark navy */
     --admin-sidebar: 0.2 0.04 240;
     --admin-sidebar-fg: 1 0 0;
@@ -65,31 +65,28 @@
 
 @layer utilities {
   .token-white {
-    background-color: oklch(var(--token-white));
-    border: 2px solid oklch(0.85 0.03 234);
-    color: oklch(0.4 0.04 234);
+    background-color: white;
+    border: 2px solid #e2e8f0;
+    color: #64748b;
   }
   .token-red {
-    background-color: oklch(var(--token-red));
-    border: 2px solid oklch(0.45 0.22 25);
+    background-color: #ef4444;
+    border: 2px solid #dc2626;
     color: white;
   }
   .token-orange {
-    background-color: oklch(var(--token-orange));
-    border: 2px solid oklch(0.6 0.18 55);
+    background-color: #f97316;
+    border: 2px solid #ea580c;
     color: white;
   }
   .token-yellow {
-    background-color: oklch(var(--token-yellow));
-    border: 2px solid oklch(0.72 0.18 88);
-    color: oklch(0.3 0.05 88);
+    background-color: #fbbf24;
+    border: 2px solid #f59e0b;
+    color: #78350f;
   }
   .token-green {
-    background-color: oklch(var(--token-green));
-    border: 2px solid oklch(0.5 0.17 145);
+    background-color: #22c55e;
+    border: 2px solid #16a34a;
     color: white;
-  }
-  .hover\:bg-white\/8:hover {
-    background-color: oklch(1 0 0 / 0.08);
   }
 }
