@@ -1,6 +1,7 @@
 import type { Doctor, Hospital } from "../types";
 
 export const ADMIN_CODE = "ADMIN-001";
+export const ADMIN_PASSWORD = "Admin@123";
 
 export const HOSPITALS: Hospital[] = [
   {

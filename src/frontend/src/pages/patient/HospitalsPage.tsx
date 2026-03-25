@@ -2,14 +2,15 @@ import { Input } from "@/components/ui/input";
 import { MapPin, Search, Star, Users } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
-import { DOCTORS, HOSPITALS } from "../../data/seed";
+import { useStore } from "../../context/StoreContext";
 import { useRouter } from "../../router/RouterContext";
 
 export default function HospitalsPage() {
   const [search, setSearch] = useState("");
   const { navigate } = useRouter();
+  const { hospitals, doctors } = useStore();
 
-  const filtered = HOSPITALS.filter(
+  const filtered = hospitals.filter(
     (h) =>
       h.name.toLowerCase().includes(search.toLowerCase()) ||
       h.area.toLowerCase().includes(search.toLowerCase()),
@@ -17,7 +18,6 @@ export default function HospitalsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Header strip */}
       <div className="bg-teal-50 rounded-2xl p-6 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Find a Hospital</h1>
@@ -49,7 +49,7 @@ export default function HospitalsPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {filtered.map((hospital, idx) => {
-            const docCount = DOCTORS.filter(
+            const docCount = doctors.filter(
               (d) => d.hospitalId === hospital.id,
             ).length;
             return (
@@ -67,27 +67,49 @@ export default function HospitalsPage() {
                     navigate({ path: "/patient/hospital", id: hospital.id })
                   }
                 >
-                  {/* Image / Gradient */}
-                  <div
-                    className={`h-36 bg-gradient-to-br ${hospital.gradient} flex flex-col justify-between p-3`}
-                  >
-                    <div className="flex justify-end">
-                      <span className="flex items-center gap-1 bg-white/20 backdrop-blur-sm text-white text-xs font-medium px-2 py-1 rounded-full">
-                        <Star className="w-3 h-3 fill-yellow-300 text-yellow-300" />
-                        {hospital.rating}
-                      </span>
+                  {hospital.photoUrl ? (
+                    <div
+                      className="h-36 relative flex flex-col justify-between p-3 bg-cover bg-center"
+                      style={{ backgroundImage: `url(${hospital.photoUrl})` }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                      <div className="relative flex justify-end">
+                        <span className="flex items-center gap-1 bg-white/20 backdrop-blur-sm text-white text-xs font-medium px-2 py-1 rounded-full">
+                          <Star className="w-3 h-3 fill-yellow-300 text-yellow-300" />
+                          {hospital.rating}
+                        </span>
+                      </div>
+                      <div className="relative">
+                        <p className="text-white font-bold text-sm leading-tight">
+                          {hospital.name}
+                        </p>
+                        <p className="text-white/80 text-xs flex items-center gap-1 mt-0.5">
+                          <MapPin className="w-3 h-3" />
+                          {hospital.area}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-white font-bold text-sm leading-tight">
-                        {hospital.name}
-                      </p>
-                      <p className="text-white/80 text-xs flex items-center gap-1 mt-0.5">
-                        <MapPin className="w-3 h-3" />
-                        {hospital.area}
-                      </p>
+                  ) : (
+                    <div
+                      className={`h-36 bg-gradient-to-br ${hospital.gradient} flex flex-col justify-between p-3`}
+                    >
+                      <div className="flex justify-end">
+                        <span className="flex items-center gap-1 bg-white/20 backdrop-blur-sm text-white text-xs font-medium px-2 py-1 rounded-full">
+                          <Star className="w-3 h-3 fill-yellow-300 text-yellow-300" />
+                          {hospital.rating}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-white font-bold text-sm leading-tight">
+                          {hospital.name}
+                        </p>
+                        <p className="text-white/80 text-xs flex items-center gap-1 mt-0.5">
+                          <MapPin className="w-3 h-3" />
+                          {hospital.area}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  {/* Info row */}
+                  )}
                   <div className="p-4 flex items-center justify-between">
                     <span className="flex items-center gap-1.5 bg-teal-50 text-teal-700 text-xs font-medium px-2.5 py-1 rounded-full">
                       <Users className="w-3 h-3" />
@@ -97,11 +119,7 @@ export default function HospitalsPage() {
                       {[1, 2, 3, 4, 5].map((s) => (
                         <Star
                           key={s}
-                          className={`w-3 h-3 ${
-                            s <= Math.floor(hospital.rating)
-                              ? "fill-amber-400 text-amber-400"
-                              : "text-gray-200"
-                          }`}
+                          className={`w-3 h-3 ${s <= Math.floor(hospital.rating) ? "fill-amber-400 text-amber-400" : "text-gray-200"}`}
                         />
                       ))}
                     </span>

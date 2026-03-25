@@ -4,6 +4,8 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Activity,
+  Eye,
+  EyeOff,
   KeyRound,
   Loader2,
   Lock,
@@ -15,7 +17,7 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 import { useStore } from "../context/StoreContext";
-import { ADMIN_CODE } from "../data/seed";
+import { ADMIN_CODE, ADMIN_PASSWORD } from "../data/seed";
 import { useRouter } from "../router/RouterContext";
 
 export default function LoginPage() {
@@ -27,6 +29,8 @@ export default function LoginPage() {
   const [patientName, setPatientName] = useState("");
   const [doctorCode, setDoctorCode] = useState("");
   const [adminCode, setAdminCode] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   function handlePatientLogin(e: React.FormEvent) {
@@ -72,12 +76,16 @@ export default function LoginPage() {
 
   function handleAdminLogin(e: React.FormEvent) {
     e.preventDefault();
-    if (!adminCode) {
-      toast.error("Please enter admin code");
+    if (!adminCode || !adminPassword) {
+      toast.error("Please enter admin code and password");
       return;
     }
     if (adminCode.toUpperCase() !== ADMIN_CODE) {
       toast.error("Invalid admin code");
+      return;
+    }
+    if (adminPassword !== ADMIN_PASSWORD) {
+      toast.error("Invalid admin password");
       return;
     }
     setLoading(true);
@@ -341,6 +349,35 @@ export default function LoginPage() {
                     <p className="text-xs text-gray-400">
                       Demo code: ADMIN-001
                     </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="admin-password" className="text-gray-700">
+                      Password
+                    </Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                      <Input
+                        id="admin-password"
+                        type={showAdminPassword ? "text" : "password"}
+                        className="pl-9 pr-9"
+                        placeholder="Enter admin password"
+                        value={adminPassword}
+                        onChange={(e) => setAdminPassword(e.target.value)}
+                        data-ocid="login.admin_password"
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                        onClick={() => setShowAdminPassword((v) => !v)}
+                        tabIndex={-1}
+                      >
+                        {showAdminPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                   <Button
                     type="submit"
