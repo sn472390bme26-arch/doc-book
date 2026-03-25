@@ -19,10 +19,10 @@ function LandingPage() {
   const { navigate } = useRouter();
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white border-b border-gray-200 px-6 py-3">
+      <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-full bg-teal-500 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-full bg-teal-500 flex items-center justify-center shrink-0">
               <Stethoscope className="w-5 h-5 text-white" />
             </div>
             <span>
@@ -30,19 +30,19 @@ function LandingPage() {
               <span className="font-bold text-teal-500"> Booked</span>
             </span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 sm:gap-3">
             <button
               type="button"
-              onClick={() => navigate({ path: "/" })}
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-teal-600 transition-colors"
+              onClick={() => navigate({ path: "/login" })}
+              className="px-3 sm:px-4 py-2 text-sm font-medium text-gray-700 hover:text-teal-600 transition-colors"
               data-ocid="landing.link"
             >
-              Patient Login
+              Login
             </button>
             <button
               type="button"
-              onClick={() => navigate({ path: "/" })}
-              className="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white text-sm font-medium rounded-full transition-colors"
+              onClick={() => navigate({ path: "/login" })}
+              className="px-3 sm:px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white text-sm font-medium rounded-full transition-colors whitespace-nowrap"
               data-ocid="landing.primary_button"
             >
               Doctor Portal
@@ -53,37 +53,37 @@ function LandingPage() {
 
       <main className="flex-1">
         {/* Hero */}
-        <div className="px-4 pt-10 pb-12">
+        <div className="px-4 pt-6 sm:pt-10 pb-8 sm:pb-12">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="max-w-6xl mx-auto bg-gradient-to-br from-slate-800 to-teal-900 rounded-3xl p-12 text-white"
+            className="max-w-6xl mx-auto bg-gradient-to-br from-slate-800 to-teal-900 rounded-3xl p-6 sm:p-12 text-white"
           >
             <div className="max-w-2xl">
-              <h1 className="text-5xl font-bold text-white leading-tight mb-2">
+              <h1 className="text-3xl sm:text-5xl font-bold text-white leading-tight mb-2">
                 Skip the waiting room.
               </h1>
-              <h2 className="text-5xl font-bold text-teal-400 leading-tight mb-6">
+              <h2 className="text-3xl sm:text-5xl font-bold text-teal-400 leading-tight mb-4 sm:mb-6">
                 Track your token live.
               </h2>
-              <p className="text-slate-300 text-lg mb-8 leading-relaxed">
+              <p className="text-slate-300 text-base sm:text-lg mb-6 sm:mb-8 leading-relaxed">
                 Book appointments with top doctors, get a real-time token
                 number, and know exactly when it's your turn — all from your
                 phone.
               </p>
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <button
                   type="button"
-                  onClick={() => navigate({ path: "/" })}
-                  className="bg-teal-500 hover:bg-teal-600 text-white px-6 py-3 rounded-full font-semibold transition-colors"
+                  onClick={() => navigate({ path: "/login" })}
+                  className="bg-teal-500 hover:bg-teal-600 text-white px-6 py-3 rounded-full font-semibold transition-colors text-center"
                   data-ocid="landing.primary_button"
                 >
                   Book an Appointment
                 </button>
                 <button
                   type="button"
-                  onClick={() => navigate({ path: "/" })}
-                  className="bg-slate-700 hover:bg-slate-600 text-white px-6 py-3 rounded-full font-semibold transition-colors"
+                  onClick={() => navigate({ path: "/login" })}
+                  className="bg-slate-700 hover:bg-slate-600 text-white px-6 py-3 rounded-full font-semibold transition-colors text-center"
                   data-ocid="landing.secondary_button"
                 >
                   Doctor Portal

@@ -8,6 +8,7 @@ import {
 
 type Route =
   | { path: "/" }
+  | { path: "/login" }
   | { path: "/patient/hospitals" }
   | { path: "/patient/hospital"; id: string }
   | { path: "/patient/tokens" }
