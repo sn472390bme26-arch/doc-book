@@ -3,7 +3,6 @@ import {
   ArrowLeft,
   Calendar,
   ChevronRight,
-  IndianRupee,
   Stethoscope,
   User,
 } from "lucide-react";
@@ -117,13 +116,6 @@ export default function HospitalDoctorsPage({ id }: Props) {
                   <div className="flex items-center gap-1.5 text-sm text-gray-500 mt-0.5">
                     <Stethoscope className="w-3.5 h-3.5" />
                     {doctor.specialty}
-                  </div>
-                  <div className="flex items-center gap-1 mt-1 text-gray-700 font-semibold">
-                    <IndianRupee className="w-3.5 h-3.5 text-teal-600" />
-                    <span>{doctor.price}</span>
-                    <span className="text-xs font-normal text-gray-400">
-                      per session
-                    </span>
                   </div>
                   {/* Session tags with custom timings */}
                   <div className="flex flex-wrap gap-1.5 mt-2">

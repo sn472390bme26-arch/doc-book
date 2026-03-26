@@ -43,12 +43,13 @@ import { toast } from "sonner";
 import { useStore } from "../../context/StoreContext";
 import type { Doctor } from "../../types";
 
+const STANDARD_FEE = 10;
+
 type AddForm = {
   name: string;
   phone: string;
   specialty: string;
   hospitalId: string;
-  consultationFee: string;
   tokensPerSession: string;
   sessions: string;
 };
@@ -56,7 +57,6 @@ type AddForm = {
 type EditForm = {
   specialty: string;
   hospitalId: string;
-  consultationFee: string;
   isAvailable: boolean;
 };
 
@@ -70,14 +70,12 @@ export default function AdminDoctors() {
     phone: "",
     specialty: "",
     hospitalId: "",
-    consultationFee: "",
     tokensPerSession: "20",
     sessions: "morning,afternoon",
   });
   const [editForm, setEditForm] = useState<EditForm>({
     specialty: "",
     hospitalId: "",
-    consultationFee: "",
     isAvailable: true,
   });
 
@@ -90,7 +88,6 @@ export default function AdminDoctors() {
       toast.error("Name, specialty, and hospital are required");
       return;
     }
-    const fee = Number.parseFloat(addForm.consultationFee) || 0;
     const tokens = Number.parseInt(addForm.tokensPerSession, 10) || 20;
     const sessions = addForm.sessions
       .split(",")
@@ -100,8 +97,8 @@ export default function AdminDoctors() {
       phone: addForm.phone,
       specialty: addForm.specialty,
       hospitalId: addForm.hospitalId,
-      consultationFee: fee,
-      price: fee,
+      consultationFee: STANDARD_FEE,
+      price: STANDARD_FEE,
       tokensPerSession: tokens,
       sessions,
       isAvailable: true,
@@ -112,7 +109,6 @@ export default function AdminDoctors() {
       phone: "",
       specialty: "",
       hospitalId: "",
-      consultationFee: "",
       tokensPerSession: "20",
       sessions: "morning,afternoon",
     });
@@ -124,7 +120,6 @@ export default function AdminDoctors() {
     setEditForm({
       specialty: doc.specialty,
       hospitalId: doc.hospitalId,
-      consultationFee: String(doc.consultationFee ?? doc.price),
       isAvailable: doc.isAvailable ?? true,
     });
   }
@@ -134,8 +129,8 @@ export default function AdminDoctors() {
     updateDoctor(editDoctor.id, {
       specialty: editForm.specialty,
       hospitalId: editForm.hospitalId,
-      consultationFee: Number.parseFloat(editForm.consultationFee) || 0,
-      price: Number.parseFloat(editForm.consultationFee) || 0,
+      consultationFee: STANDARD_FEE,
+      price: STANDARD_FEE,
       isAvailable: editForm.isAvailable,
     });
     toast.success("Doctor updated");
@@ -228,37 +223,20 @@ export default function AdminDoctors() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label>Consultation Fee (₹)</Label>
-                  <Input
-                    type="number"
-                    placeholder="800"
-                    value={addForm.consultationFee}
-                    onChange={(e) =>
-                      setAddForm((f) => ({
-                        ...f,
-                        consultationFee: e.target.value,
-                      }))
-                    }
-                    data-ocid="admin.input"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Tokens per Session</Label>
-                  <Input
-                    type="number"
-                    placeholder="20"
-                    value={addForm.tokensPerSession}
-                    onChange={(e) =>
-                      setAddForm((f) => ({
-                        ...f,
-                        tokensPerSession: e.target.value,
-                      }))
-                    }
-                    data-ocid="admin.input"
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <Label>Tokens per Session</Label>
+                <Input
+                  type="number"
+                  placeholder="20"
+                  value={addForm.tokensPerSession}
+                  onChange={(e) =>
+                    setAddForm((f) => ({
+                      ...f,
+                      tokensPerSession: e.target.value,
+                    }))
+                  }
+                  data-ocid="admin.input"
+                />
               </div>
             </div>
             <DialogFooter>
@@ -296,7 +274,6 @@ export default function AdminDoctors() {
               <TableHead>Hospital</TableHead>
               <TableHead>Specialty</TableHead>
               <TableHead>Phone</TableHead>
-              <TableHead>Fee</TableHead>
               <TableHead>Code</TableHead>
               <TableHead className="text-center">Available</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -314,9 +291,6 @@ export default function AdminDoctors() {
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm">
                   {doctor.phone ?? "—"}
-                </TableCell>
-                <TableCell className="text-sm">
-                  ₹{doctor.consultationFee ?? doctor.price}
                 </TableCell>
                 <TableCell>
                   <span className="font-mono text-xs bg-muted px-2 py-0.5 rounded">
@@ -421,20 +395,6 @@ export default function AdminDoctors() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Consultation Fee (₹)</Label>
-              <Input
-                type="number"
-                value={editForm.consultationFee}
-                onChange={(e) =>
-                  setEditForm((f) => ({
-                    ...f,
-                    consultationFee: e.target.value,
-                  }))
-                }
-                data-ocid="admin.input"
-              />
             </div>
             <div className="flex items-center gap-3">
               <Switch

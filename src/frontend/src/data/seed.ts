@@ -78,3 +78,26 @@ export function isSessionAvailable(
   endTime.setHours(endH, endM - 10, 0, 0);
   return now < endTime;
 }
+
+/**
+ * Returns true only when the session can be actively regulated:
+ * - The selected date must be TODAY
+ * - The current time must be >= the session's scheduled start time
+ */
+export function isSessionAccessibleForRegulator(
+  date: string,
+  session: string,
+  customTimings?: Partial<Record<SessionType, SessionTiming>>,
+): boolean {
+  const now = new Date();
+  const today = now.toISOString().split("T")[0];
+  // Only today's sessions can be actively regulated
+  if (date !== today) return false;
+  const custom = customTimings?.[session as SessionType];
+  const times = custom ?? SESSION_TIMES[session];
+  if (!times) return false;
+  const [startH, startM] = times.start.split(":").map(Number);
+  const startTime = new Date(now);
+  startTime.setHours(startH, startM, 0, 0);
+  return now >= startTime;
+}

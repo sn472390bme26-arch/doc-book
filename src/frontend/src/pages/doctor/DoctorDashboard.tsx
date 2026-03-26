@@ -36,11 +36,15 @@ import {
   AlertTriangle,
   BookOpen,
   CheckCircle,
+  CheckCircle2,
   Clock,
+  FileText,
   Globe,
   Languages,
+  Lock,
   Phone,
   Save,
+  SkipForward,
   Stethoscope,
   Upload,
   User,
@@ -51,8 +55,10 @@ import { toast } from "sonner";
 import { useStore } from "../../context/StoreContext";
 import {
   SESSION_TIMES,
+  formatTime12h,
   getAvailableDates,
   getSessionLabel,
+  isSessionAccessibleForRegulator,
   makeSessionId,
 } from "../../data/seed";
 import type {
@@ -65,10 +71,11 @@ import type {
 const TOKEN_CLASSES: Record<string, string> = {
   white: "token-white cursor-pointer hover:opacity-80",
   red: "token-red cursor-pointer hover:opacity-80",
-  orange: "token-orange cursor-pointer",
+  orange: "token-orange cursor-pointer hover:opacity-80",
   yellow: "token-yellow cursor-pointer",
   green: "token-green",
-  unvisited: "bg-gray-100 border-2 border-gray-200 text-gray-400",
+  unvisited:
+    "bg-purple-100 border-2 border-purple-300 text-purple-700 cursor-pointer hover:opacity-80",
 };
 
 const PRIORITY_STATUS_CLASSES: Record<string, string> = {
@@ -92,11 +99,14 @@ export default function DoctorDashboard() {
     getOrCreateTokenState,
     regulateToken,
     completeCurrentToken,
+    skipToken,
+    completeSkippedToken,
     closeSession,
     setPrioritySlot,
     cancelSession,
     isSessionCancelled,
     tokenStates,
+    getBookingsForSession,
   } = useStore();
 
   const doctorUser = user as { doctorId: string; code: string };
@@ -135,6 +145,10 @@ export default function DoctorDashboard() {
     type: "ended" | "cancelled";
     session: string;
   } | null>(null);
+  const [tokenDialog, setTokenDialog] = useState<{
+    open: boolean;
+    tokenNum: number | null;
+  }>({ open: false, tokenNum: null });
 
   const visibleSessions = useMemo(() => {
     if (!doctor) return [];
@@ -153,11 +167,45 @@ export default function DoctorDashboard() {
     ? getOrCreateTokenState(sessionId, doctor.id, regDate, regSession)
     : null;
   const statuses = tokenState?.tokenStatuses ?? {};
-  const currentToken = tokenState?.currentToken ?? null;
   const isClosed = tokenState?.isClosed ?? false;
   const cancelled = doctor
     ? isSessionCancelled(doctor.id, regDate, regSession)
     : false;
+
+  // Session is only accessible for token regulation when date=today AND time >= session start
+  const isSessionAccessibleNow = isSessionAccessibleForRegulator(
+    regDate,
+    regSession,
+    doctor?.sessionTimings,
+  );
+
+  // Show cancel button for future sessions OR today's sessions that haven't started yet
+  const canCancelSession =
+    !cancelled &&
+    !isClosed &&
+    (regDate > today || (regDate === today && !isSessionAccessibleNow));
+
+  // Get the session start time for display
+  function getSessionStartTime(session: SessionType): string {
+    const custom = doctor?.sessionTimings?.[session];
+    const times = custom ?? SESSION_TIMES[session];
+    return times ? formatTime12h(times.start) : "";
+  }
+
+  // Derive info for the token dialog
+  const dialogTokenBooking = useMemo(() => {
+    if (tokenDialog.tokenNum === null) return null;
+    const sessionBookings = getBookingsForSession(sessionId);
+    return (
+      sessionBookings.find((b) => b.tokenNumber === tokenDialog.tokenNum) ??
+      null
+    );
+  }, [tokenDialog.tokenNum, sessionId, getBookingsForSession]);
+
+  const dialogTokenStatus: TokenStatus | null = useMemo(() => {
+    if (tokenDialog.tokenNum === null) return null;
+    return (statuses[tokenDialog.tokenNum] as TokenStatus) ?? "white";
+  }, [tokenDialog.tokenNum, statuses]);
 
   function handleSaveProfile() {
     updateDoctor(doctor.id, {
@@ -237,16 +285,42 @@ export default function DoctorDashboard() {
   }
 
   function handleTokenClick(tokenNum: number) {
-    if (isClosed) return;
+    if (isClosed || !isSessionAccessibleNow) return;
     const st = statuses[tokenNum] as TokenStatus;
-    if (st !== "red" && st !== "yellow") return;
-    regulateToken(sessionId, tokenNum);
-    toast.success(`Token #${tokenNum} is now being seen`);
+    if (
+      st !== "red" &&
+      st !== "yellow" &&
+      st !== "orange" &&
+      st !== "unvisited"
+    )
+      return;
+    setTokenDialog({ open: true, tokenNum });
   }
 
-  function handleCompleteToken() {
+  function handleMarkAsOngoing() {
+    if (tokenDialog.tokenNum === null) return;
+    regulateToken(sessionId, tokenDialog.tokenNum);
+    toast.success(`Token #${tokenDialog.tokenNum} is now being seen`);
+    setTokenDialog({ open: false, tokenNum: null });
+  }
+
+  function handleMarkCompleted() {
     completeCurrentToken(sessionId);
     toast.success("Token completed, moving to next");
+    setTokenDialog({ open: false, tokenNum: null });
+  }
+
+  function handleSkipToken() {
+    skipToken(sessionId);
+    toast.success("Patient skipped, moving to next token");
+    setTokenDialog({ open: false, tokenNum: null });
+  }
+
+  function handleCompleteSkipped() {
+    if (tokenDialog.tokenNum === null) return;
+    completeSkippedToken(sessionId, tokenDialog.tokenNum);
+    toast.success(`Token #${tokenDialog.tokenNum} marked as completed`);
+    setTokenDialog({ open: false, tokenNum: null });
   }
 
   function handleCloseSession() {
@@ -292,7 +366,13 @@ export default function DoctorDashboard() {
     const elements: React.ReactNode[] = [];
     for (let n = 1; n <= maxTokens; n++) {
       const st: TokenStatus = (statuses[n] as TokenStatus) ?? "white";
-      const isClickable = (st === "red" || st === "yellow") && !isClosed;
+      const isClickable =
+        (st === "red" ||
+          st === "yellow" ||
+          st === "orange" ||
+          st === "unvisited") &&
+        !isClosed &&
+        isSessionAccessibleNow;
       elements.push(
         <button
           key={n}
@@ -306,9 +386,9 @@ export default function DoctorDashboard() {
           onClick={() => handleTokenClick(n)}
           title={
             st === "orange"
-              ? "Currently seeing"
+              ? "Currently seeing — click to act"
               : st === "yellow"
-                ? "Next up"
+                ? "Next up — click to call"
                 : st === "green"
                   ? "Done"
                   : st === "red"
@@ -416,6 +496,7 @@ export default function DoctorDashboard() {
                                 month: "short",
                               },
                             )}
+                            {d === today ? " (Today)" : ""}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -451,6 +532,14 @@ export default function DoctorDashboard() {
                       <span className="bg-gray-100 text-gray-600 text-xs font-medium px-3 py-1.5 rounded-full">
                         Session Closed
                       </span>
+                    ) : regDate > today ? (
+                      <span className="bg-blue-100 text-blue-700 text-xs font-medium px-3 py-1.5 rounded-full">
+                        Upcoming
+                      </span>
+                    ) : !isSessionAccessibleNow ? (
+                      <span className="bg-yellow-100 text-yellow-700 text-xs font-medium px-3 py-1.5 rounded-full">
+                        Not Started Yet
+                      </span>
                     ) : (
                       <span className="bg-green-100 text-green-700 text-xs font-medium px-3 py-1.5 rounded-full">
                         Session Active
@@ -477,19 +566,8 @@ export default function DoctorDashboard() {
                     )}
                   </CardTitle>
                   <div className="flex flex-wrap items-center gap-2">
-                    {currentToken !== null && !isClosed && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-green-300 text-green-700 hover:bg-green-50 flex-1 sm:flex-none"
-                        onClick={handleCompleteToken}
-                        data-ocid="tokens.primary_button"
-                      >
-                        <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
-                        Complete #{currentToken}
-                      </Button>
-                    )}
-                    {!isClosed && !cancelled && (
+                    {/* End Session: only when session is accessible now */}
+                    {!isClosed && !cancelled && isSessionAccessibleNow && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
@@ -527,7 +605,8 @@ export default function DoctorDashboard() {
                         </AlertDialogContent>
                       </AlertDialog>
                     )}
-                    {regDate > today && !cancelled && (
+                    {/* Cancel Session: for future dates or today's sessions before start time */}
+                    {canCancelSession && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
@@ -543,7 +622,7 @@ export default function DoctorDashboard() {
                         <AlertDialogContent data-ocid="tokens.dialog">
                           <AlertDialogHeader>
                             <AlertDialogTitle>
-                              Cancel Upcoming Session?
+                              Cancel This Session?
                             </AlertDialogTitle>
                             <AlertDialogDescription>
                               This will cancel the{" "}
@@ -581,6 +660,42 @@ export default function DoctorDashboard() {
                       This session has been cancelled.
                     </p>
                   </div>
+                ) : regDate > today ? (
+                  /* Future date — show locked state, only cancel available above */
+                  <div className="py-12 text-center">
+                    <Lock className="w-10 h-10 text-blue-300 mx-auto mb-3" />
+                    <p className="text-gray-700 font-semibold text-base">
+                      Session Not Yet Started
+                    </p>
+                    <p className="text-gray-400 text-sm mt-1">
+                      This session is scheduled for{" "}
+                      {new Date(`${regDate}T00:00:00`).toLocaleDateString(
+                        "en-IN",
+                        { weekday: "long", day: "numeric", month: "long" },
+                      )}
+                      .
+                    </p>
+                    <p className="text-gray-400 text-sm mt-0.5">
+                      Token regulation will be available on that date at{" "}
+                      {getSessionStartTime(regSession)}.
+                    </p>
+                  </div>
+                ) : !isSessionAccessibleNow && !isClosed ? (
+                  /* Today but session hasn't started yet */
+                  <div className="py-12 text-center">
+                    <Lock className="w-10 h-10 text-yellow-400 mx-auto mb-3" />
+                    <p className="text-gray-700 font-semibold text-base">
+                      Session Starts at {getSessionStartTime(regSession)}
+                    </p>
+                    <p className="text-gray-400 text-sm mt-1">
+                      The token regulator will unlock automatically when the
+                      session start time is reached.
+                    </p>
+                    <p className="text-gray-400 text-sm mt-0.5">
+                      You can cancel this session using the button above if
+                      needed.
+                    </p>
+                  </div>
                 ) : (
                   <>
                     <div className="flex flex-wrap gap-3 mb-4">
@@ -590,6 +705,7 @@ export default function DoctorDashboard() {
                           ["#ef4444", "Booked"],
                           ["#f97316", "Ongoing"],
                           ["#22c55e", "Done"],
+                          ["#7c3aed", "Skipped"],
                         ] as [string, string][]
                       ).map(([color, label]) => (
                         <div key={label} className="flex items-center gap-1.5">
@@ -986,6 +1102,113 @@ export default function DoctorDashboard() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Token Action Dialog */}
+      <Dialog
+        open={tokenDialog.open}
+        onOpenChange={(v) => {
+          if (!v) setTokenDialog({ open: false, tokenNum: null });
+        }}
+      >
+        <DialogContent className="max-w-sm" data-ocid="tokens.dialog">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold">
+              Token #{tokenDialog.tokenNum}
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Patient info */}
+          <div className="space-y-4 py-1">
+            <p className="text-sm text-gray-700">
+              Patient:{" "}
+              <span className="font-semibold">
+                {dialogTokenBooking?.patientName ?? "Walk-in / Unknown"}
+              </span>
+            </p>
+
+            {/* Complaint box */}
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <FileText className="w-3.5 h-3.5 text-gray-400" />
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                  Patient Complaint
+                </span>
+              </div>
+              {dialogTokenBooking?.complaint ? (
+                <p className="text-sm text-gray-700">
+                  {dialogTokenBooking.complaint}
+                </p>
+              ) : (
+                <p className="text-sm text-gray-400 italic">
+                  No complaint submitted
+                </p>
+              )}
+            </div>
+
+            {/* Action buttons based on token status */}
+            {dialogTokenStatus === "orange" ? (
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600">
+                  Status: <span className="font-semibold">Ongoing</span>. Choose
+                  an action:
+                </p>
+                <Button
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-11"
+                  onClick={handleMarkCompleted}
+                  data-ocid="tokens.confirm_button"
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  Mark as Completed
+                </Button>
+                <Button
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold h-11"
+                  onClick={handleSkipToken}
+                  data-ocid="tokens.secondary_button"
+                >
+                  <SkipForward className="w-4 h-4 mr-2" />
+                  Patient Not Available (Skip)
+                </Button>
+              </div>
+            ) : dialogTokenStatus === "unvisited" ? (
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600">
+                  Status:{" "}
+                  <span className="font-semibold text-purple-700">Skipped</span>
+                  . Patient was previously unavailable.
+                </p>
+                <Button
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-11"
+                  onClick={handleCompleteSkipped}
+                  data-ocid="tokens.confirm_button"
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  Mark as Completed (Patient Arrived)
+                </Button>
+              </div>
+            ) : (
+              <Button
+                className="w-full bg-teal-500 hover:bg-teal-600 text-white font-bold h-11"
+                onClick={handleMarkAsOngoing}
+                data-ocid="tokens.primary_button"
+              >
+                <Activity className="w-4 h-4 mr-2" />
+                Mark as Ongoing
+              </Button>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setTokenDialog({ open: false, tokenNum: null })}
+              data-ocid="tokens.close_button"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Priority Slot Dialog */}
       <Dialog
