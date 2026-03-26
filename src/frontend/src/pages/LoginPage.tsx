@@ -21,18 +21,16 @@ import { ADMIN_CODE, ADMIN_PASSWORD } from "../data/seed";
 import { useRouter } from "../router/RouterContext";
 
 export default function LoginPage() {
-  const {
-    login,
-    doctors,
-    getPatientCredentials,
-    getPatientNameIndex,
-    savePatientCredential,
-  } = useStore();
+  const { login, doctors, getPatientCredentials, savePatientCredential } =
+    useStore();
   const { navigate } = useRouter();
 
+  // Patient form mode
+  const [patientMode, setPatientMode] = useState<"login" | "signup">("signup");
   const [patientEmail, setPatientEmail] = useState("");
   const [patientPassword, setPatientPassword] = useState("");
   const [patientName, setPatientName] = useState("");
+
   const [doctorCode, setDoctorCode] = useState("");
   const [doctorPassword, setDoctorPassword] = useState("");
   const [adminCode, setAdminCode] = useState("");
@@ -40,49 +38,98 @@ export default function LoginPage() {
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  function switchPatientMode(mode: "login" | "signup") {
+    setPatientMode(mode);
+    setPatientEmail("");
+    setPatientPassword("");
+    setPatientName("");
+  }
+
   function handlePatientLogin(e: React.FormEvent) {
     e.preventDefault();
-    const name = patientName.trim();
     const email = patientEmail.trim().toLowerCase();
     const password = patientPassword;
 
-    if (!name || !email || !password) {
-      toast.error("Please fill all fields");
-      return;
-    }
-
-    const credentials = getPatientCredentials();
-    const nameIndex = getPatientNameIndex();
-
-    // Check name uniqueness: same name used by a different email?
-    const nameOwner = nameIndex[name.toLowerCase()];
-    if (nameOwner && nameOwner !== email) {
-      toast.error("This name is already taken");
-      return;
-    }
-
-    const existing = credentials[email];
-    if (existing) {
-      // Email already registered — verify name and password
-      if (existing.name !== name) {
-        toast.error("Name does not match the registered name for this email");
+    if (patientMode === "login") {
+      if (!email || !password) {
+        toast.error("Please fill all fields");
+        return;
+      }
+      const credentials = getPatientCredentials();
+      const existing = credentials[email];
+      if (!existing) {
+        toast.error("No account found with this email. Please sign up first.");
         return;
       }
       if (existing.password !== password) {
-        toast.error("Incorrect password");
+        toast.error("Incorrect password.");
         return;
       }
+      setLoading(true);
+      setTimeout(() => {
+        login({
+          id: `p_${email}`,
+          email,
+          name: existing.name,
+          role: "patient",
+        });
+        setLoading(false);
+        navigate({ path: "/patient/hospitals" });
+      }, 800);
     } else {
-      // New registration — save credentials
-      savePatientCredential(email, name, password);
-    }
+      // Sign Up
+      const name = patientName.trim();
+      if (!name || !email || !password) {
+        toast.error("Please fill all fields");
+        return;
+      }
+      const credentials = getPatientCredentials();
 
+      if (credentials[email]) {
+        toast.error(
+          "An account with this email already exists. Please log in.",
+        );
+        return;
+      }
+      savePatientCredential(email, name, password);
+      setLoading(true);
+      setTimeout(() => {
+        login({
+          id: `p_${email}`,
+          email,
+          name,
+          role: "patient",
+        });
+        setLoading(false);
+        navigate({ path: "/patient/hospitals" });
+      }, 800);
+    }
+  }
+
+  function handlePatientLoginOnly(e: React.FormEvent) {
+    e.preventDefault();
+    const email = patientEmail.trim().toLowerCase();
+    const password = patientPassword;
+    if (!email || !password) {
+      toast.error("Please fill all fields");
+      return;
+    }
+    const credentials = getPatientCredentials();
+    const existing = credentials[email];
+    if (!existing) {
+      toast.error("No account found with this email. Please sign up first.");
+      return;
+    }
+    if (existing.password !== password) {
+      toast.error("Incorrect password.");
+      return;
+    }
     setLoading(true);
     setTimeout(() => {
       login({
         id: `p_${email}`,
         email,
-        name,
+        name: existing.name,
         role: "patient",
       });
       setLoading(false);
@@ -221,82 +268,200 @@ export default function LoginPage() {
                       Patient Portal
                     </h3>
                     <p className="text-gray-500 text-sm mt-1">
-                      Sign in to book and track appointments
+                      {patientMode === "signup"
+                        ? "Create your account"
+                        : "Welcome back"}
                     </p>
                   </div>
-                  <form onSubmit={handlePatientLogin} className="space-y-4">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="patient-name" className="text-gray-700">
-                        Full Name
-                      </Label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                        <Input
-                          id="patient-name"
-                          className="pl-9"
-                          placeholder="Your full name"
-                          value={patientName}
-                          onChange={(e) => setPatientName(e.target.value)}
-                          data-ocid="login.input"
-                        />
+
+                  {patientMode === "signup" ? (
+                    /* ── SIGN UP FORM ── */
+                    <form onSubmit={handlePatientLogin} className="space-y-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="patient-name" className="text-gray-700">
+                          Full Name
+                        </Label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                          <Input
+                            id="patient-name"
+                            className="pl-9"
+                            placeholder="Your full name"
+                            value={patientName}
+                            onChange={(e) => setPatientName(e.target.value)}
+                            data-ocid="login.input"
+                          />
+                        </div>
                       </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="patient-email" className="text-gray-700">
-                        Email
-                      </Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                        <Input
-                          id="patient-email"
-                          type="email"
-                          className="pl-9"
-                          placeholder="your@email.com"
-                          value={patientEmail}
-                          onChange={(e) => setPatientEmail(e.target.value)}
-                          data-ocid="login.input"
-                        />
+                      <div className="space-y-1.5">
+                        <Label
+                          htmlFor="patient-email"
+                          className="text-gray-700"
+                        >
+                          Email
+                        </Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                          <Input
+                            id="patient-email"
+                            type="email"
+                            className="pl-9"
+                            placeholder="your@email.com"
+                            value={patientEmail}
+                            onChange={(e) => setPatientEmail(e.target.value)}
+                            data-ocid="login.input"
+                          />
+                        </div>
                       </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label
-                        htmlFor="patient-password"
-                        className="text-gray-700"
+                      <div className="space-y-1.5">
+                        <Label
+                          htmlFor="patient-password"
+                          className="text-gray-700"
+                        >
+                          Password
+                        </Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                          <Input
+                            id="patient-password"
+                            type="password"
+                            className="pl-9"
+                            placeholder="Create a password"
+                            value={patientPassword}
+                            onChange={(e) => setPatientPassword(e.target.value)}
+                            data-ocid="login.input"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Sign Up button */}
+                      <Button
+                        type="submit"
+                        className="w-full bg-teal-500 hover:bg-teal-600 rounded-full h-11"
+                        disabled={loading}
+                        data-ocid="login.submit_button"
                       >
-                        Password
-                      </Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-                        <Input
-                          id="patient-password"
-                          type="password"
-                          className="pl-9"
-                          placeholder="Enter password"
-                          value={patientPassword}
-                          onChange={(e) => setPatientPassword(e.target.value)}
-                          data-ocid="login.input"
-                        />
+                        {loading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Creating account...
+                          </>
+                        ) : (
+                          "Sign Up"
+                        )}
+                      </Button>
+
+                      {/* Already have account link */}
+                      <p className="text-xs text-center text-gray-500">
+                        Already have an account?{" "}
+                        <button
+                          type="button"
+                          className="text-teal-600 hover:underline font-medium"
+                          onClick={() => switchPatientMode("login")}
+                          data-ocid="login.link"
+                        >
+                          Log in
+                        </button>
+                      </p>
+
+                      {/* OR divider */}
+                      <div className="flex items-center gap-3 my-1">
+                        <div className="flex-1 h-px bg-gray-200" />
+                        <span className="text-xs text-gray-400 font-medium">
+                          OR
+                        </span>
+                        <div className="flex-1 h-px bg-gray-200" />
                       </div>
-                    </div>
-                    <Button
-                      type="submit"
-                      className="w-full bg-teal-500 hover:bg-teal-600 rounded-full h-11"
-                      disabled={loading}
-                      data-ocid="login.submit_button"
+
+                      {/* Standalone Login button */}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full rounded-full h-11 border-teal-400 text-teal-600 hover:bg-teal-50"
+                        onClick={() => switchPatientMode("login")}
+                        data-ocid="login.secondary_button"
+                      >
+                        Login
+                      </Button>
+                    </form>
+                  ) : (
+                    /* ── LOGIN FORM ── */
+                    <form
+                      onSubmit={handlePatientLoginOnly}
+                      className="space-y-4"
                     >
-                      {loading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Signing in...
-                        </>
-                      ) : (
-                        "Sign In & Continue"
-                      )}
-                    </Button>
-                    <p className="text-xs text-gray-400 text-center">
-                      By signing in, you agree to our Terms of Service.
-                    </p>
-                  </form>
+                      <div className="space-y-1.5">
+                        <Label
+                          htmlFor="patient-email-login"
+                          className="text-gray-700"
+                        >
+                          Email
+                        </Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                          <Input
+                            id="patient-email-login"
+                            type="email"
+                            className="pl-9"
+                            placeholder="your@email.com"
+                            value={patientEmail}
+                            onChange={(e) => setPatientEmail(e.target.value)}
+                            data-ocid="login.input"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label
+                          htmlFor="patient-password-login"
+                          className="text-gray-700"
+                        >
+                          Password
+                        </Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                          <Input
+                            id="patient-password-login"
+                            type="password"
+                            className="pl-9"
+                            placeholder="Enter your password"
+                            value={patientPassword}
+                            onChange={(e) => setPatientPassword(e.target.value)}
+                            data-ocid="login.input"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Login button */}
+                      <Button
+                        type="submit"
+                        className="w-full bg-teal-500 hover:bg-teal-600 rounded-full h-11"
+                        disabled={loading}
+                        data-ocid="login.submit_button"
+                      >
+                        {loading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Signing in...
+                          </>
+                        ) : (
+                          "Login"
+                        )}
+                      </Button>
+
+                      {/* Sign up link */}
+                      <p className="text-xs text-center text-gray-500">
+                        Don&apos;t have an account?{" "}
+                        <button
+                          type="button"
+                          className="text-teal-600 hover:underline font-medium"
+                          onClick={() => switchPatientMode("signup")}
+                          data-ocid="login.link"
+                        >
+                          Sign up
+                        </button>
+                      </p>
+                    </form>
+                  )}
                 </div>
               </div>
             </TabsContent>
