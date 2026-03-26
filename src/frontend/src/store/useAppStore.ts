@@ -16,8 +16,9 @@ const LS_TOKEN_STATES = "meditoken_token_states";
 const LS_DOCTORS = "meditoken_doctors";
 const LS_HOSPITALS = "meditoken_hospitals";
 const LS_PATIENTS = "meditoken_patients";
-const LS_DELETED_DOCTORS = "meditoken_deleted_doctors";
 const LS_HOSPITALS_INITIALIZED = "meditoken_hospitals_initialized";
+const LS_PATIENT_CREDENTIALS = "meditoken_patient_creds";
+const LS_PATIENT_NAMES = "meditoken_patient_names";
 
 function loadLS<T>(key: string, fallback: T): T {
   try {
@@ -32,23 +33,8 @@ function saveLS(key: string, val: unknown) {
   localStorage.setItem(key, JSON.stringify(val));
 }
 
-import { DOCTORS as SEED_DOCTORS } from "../data/seed";
-
 function initDoctors(): Doctor[] {
-  const saved = loadLS<Doctor[]>(LS_DOCTORS, []);
-  const deletedIds = loadLS<string[]>(LS_DELETED_DOCTORS, []);
-  // Merge saved overrides with seed doctors, excluding deleted ones
-  const seedMerged = SEED_DOCTORS.filter(
-    (sd) => !deletedIds.includes(sd.id),
-  ).map((sd) => {
-    const override = saved.find((d) => d.id === sd.id);
-    return override ?? sd;
-  });
-  // Add any extra doctors not in seed
-  const extraDoctors = saved.filter(
-    (sd) => !SEED_DOCTORS.find((seed) => seed.id === sd.id),
-  );
-  return [...seedMerged, ...extraDoctors];
+  return loadLS<Doctor[]>(LS_DOCTORS, []);
 }
 
 function initHospitals(): Hospital[] {
@@ -76,6 +62,36 @@ export function useAppStore() {
     loadLS(LS_PATIENTS, []),
   );
   const [notification, setNotification] = useState<string | null>(null);
+
+  const getPatientCredentials = useCallback((): Record<
+    string,
+    { name: string; password: string }
+  > => {
+    return loadLS<Record<string, { name: string; password: string }>>(
+      LS_PATIENT_CREDENTIALS,
+      {},
+    );
+  }, []);
+
+  const getPatientNameIndex = useCallback((): Record<string, string> => {
+    return loadLS<Record<string, string>>(LS_PATIENT_NAMES, {});
+  }, []);
+
+  const savePatientCredential = useCallback(
+    (email: string, name: string, password: string) => {
+      const creds = loadLS<Record<string, { name: string; password: string }>>(
+        LS_PATIENT_CREDENTIALS,
+        {},
+      );
+      creds[email.toLowerCase()] = { name, password };
+      saveLS(LS_PATIENT_CREDENTIALS, creds);
+
+      const nameIndex = loadLS<Record<string, string>>(LS_PATIENT_NAMES, {});
+      nameIndex[name.toLowerCase()] = email.toLowerCase();
+      saveLS(LS_PATIENT_NAMES, nameIndex);
+    },
+    [],
+  );
 
   const login = useCallback((u: AppUser) => {
     setUser(u);
@@ -370,9 +386,8 @@ export function useAppStore() {
 
   const addDoctor = useCallback((d: Omit<Doctor, "id" | "code">): Doctor => {
     const savedDocs = loadLS<Doctor[]>(LS_DOCTORS, []);
-    const allCodes = [...SEED_DOCTORS, ...savedDocs];
     let max = 0;
-    for (const doc of allCodes) {
+    for (const doc of savedDocs) {
       if (doc.code) {
         const match = doc.code.match(/DOC-?(\d+)/i);
         if (match) {
@@ -394,14 +409,6 @@ export function useAppStore() {
   }, []);
 
   const deleteDoctor = useCallback((doctorId: string) => {
-    // Track deleted seed doctors so they don't reappear on refresh
-    const isSeedDoctor = SEED_DOCTORS.some((sd) => sd.id === doctorId);
-    if (isSeedDoctor) {
-      const deletedIds = loadLS<string[]>(LS_DELETED_DOCTORS, []);
-      if (!deletedIds.includes(doctorId)) {
-        saveLS(LS_DELETED_DOCTORS, [...deletedIds, doctorId]);
-      }
-    }
     setDoctors((prev) => {
       const next = prev.filter((d) => d.id !== doctorId);
       saveLS(LS_DOCTORS, next);
@@ -527,6 +534,9 @@ export function useAppStore() {
     getStats,
     notification,
     setNotification,
+    getPatientCredentials,
+    getPatientNameIndex,
+    savePatientCredential,
   };
 }
 

@@ -131,6 +131,10 @@ export default function DoctorDashboard() {
     index: number;
     slot: PrioritySlotState | null;
   }>({ open: false, index: 0, slot: null });
+  const [sessionActionResult, setSessionActionResult] = useState<{
+    type: "ended" | "cancelled";
+    session: string;
+  } | null>(null);
 
   const visibleSessions = useMemo(() => {
     if (!doctor) return [];
@@ -246,19 +250,23 @@ export default function DoctorDashboard() {
   }
 
   function handleCloseSession() {
+    const sessionLabel = getSessionLabel(regSession, doctor?.sessionTimings);
     closeSession(sessionId);
     toast.success(
       "Session closed. Refunds will be processed for unvisited tokens.",
     );
     const next = visibleSessions.find((s) => s !== regSession);
     if (next) setRegSession(next);
+    setSessionActionResult({ type: "ended", session: sessionLabel });
   }
 
   function handleCancelSession() {
+    const sessionLabel = getSessionLabel(regSession, doctor?.sessionTimings);
     cancelSession(doctor.id, regDate, regSession);
     toast.success("Session cancelled. Patients will be notified.");
     const next = visibleSessions.find((s) => s !== regSession);
     if (next) setRegSession(next);
+    setSessionActionResult({ type: "cancelled", session: sessionLabel });
   }
 
   function openPriorityDialog(slotIndex: number) {
@@ -1031,6 +1039,46 @@ export default function DoctorDashboard() {
               data-ocid="tokens.close_button"
             >
               Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Session Action Confirmation Dialog */}
+      <Dialog
+        open={sessionActionResult !== null}
+        onOpenChange={(v) => {
+          if (!v) setSessionActionResult(null);
+        }}
+      >
+        <DialogContent
+          onInteractOutside={(e) => e.preventDefault()}
+          data-ocid="session.dialog"
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {sessionActionResult?.type === "cancelled" ? (
+                <XCircle className="w-5 h-5 text-red-500" />
+              ) : (
+                <CheckCircle className="w-5 h-5 text-green-500" />
+              )}
+              {sessionActionResult?.type === "ended"
+                ? "Session Ended"
+                : "Session Cancelled"}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600 py-2">
+            {sessionActionResult?.type === "ended"
+              ? `The ${sessionActionResult.session} session has been successfully ended. All remaining unvisited tokens are marked for refund processing.`
+              : `The ${sessionActionResult?.session} session has been successfully cancelled. All booked patients will be notified and refunded.`}
+          </p>
+          <DialogFooter>
+            <Button
+              className="bg-teal-600 hover:bg-teal-700 text-white"
+              onClick={() => setSessionActionResult(null)}
+              data-ocid="session.confirm_button"
+            >
+              Done
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -21,13 +21,20 @@ import { ADMIN_CODE, ADMIN_PASSWORD } from "../data/seed";
 import { useRouter } from "../router/RouterContext";
 
 export default function LoginPage() {
-  const { login, doctors } = useStore();
+  const {
+    login,
+    doctors,
+    getPatientCredentials,
+    getPatientNameIndex,
+    savePatientCredential,
+  } = useStore();
   const { navigate } = useRouter();
 
   const [patientEmail, setPatientEmail] = useState("");
   const [patientPassword, setPatientPassword] = useState("");
   const [patientName, setPatientName] = useState("");
   const [doctorCode, setDoctorCode] = useState("");
+  const [doctorPassword, setDoctorPassword] = useState("");
   const [adminCode, setAdminCode] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [showAdminPassword, setShowAdminPassword] = useState(false);
@@ -35,16 +42,47 @@ export default function LoginPage() {
 
   function handlePatientLogin(e: React.FormEvent) {
     e.preventDefault();
-    if (!patientEmail || !patientPassword || !patientName) {
+    const name = patientName.trim();
+    const email = patientEmail.trim().toLowerCase();
+    const password = patientPassword;
+
+    if (!name || !email || !password) {
       toast.error("Please fill all fields");
       return;
     }
+
+    const credentials = getPatientCredentials();
+    const nameIndex = getPatientNameIndex();
+
+    // Check name uniqueness: same name used by a different email?
+    const nameOwner = nameIndex[name.toLowerCase()];
+    if (nameOwner && nameOwner !== email) {
+      toast.error("This name is already taken");
+      return;
+    }
+
+    const existing = credentials[email];
+    if (existing) {
+      // Email already registered — verify name and password
+      if (existing.name !== name) {
+        toast.error("Name does not match the registered name for this email");
+        return;
+      }
+      if (existing.password !== password) {
+        toast.error("Incorrect password");
+        return;
+      }
+    } else {
+      // New registration — save credentials
+      savePatientCredential(email, name, password);
+    }
+
     setLoading(true);
     setTimeout(() => {
       login({
-        id: `p_${patientEmail}`,
-        email: patientEmail,
-        name: patientName,
+        id: `p_${email}`,
+        email,
+        name,
         role: "patient",
       });
       setLoading(false);
@@ -54,11 +92,29 @@ export default function LoginPage() {
 
   function handleDoctorLogin(e: React.FormEvent) {
     e.preventDefault();
+    if (!doctorCode) {
+      toast.error("Please enter your doctor code");
+      return;
+    }
+    if (!doctorPassword) {
+      toast.error("Please enter your phone number as password");
+      return;
+    }
     const doctor = doctors.find(
-      (d) => d.code && d.code.toUpperCase() === doctorCode.toUpperCase(),
+      (d) => d.code && d.code.toUpperCase() === doctorCode.trim().toUpperCase(),
     );
     if (!doctor) {
-      toast.error("Invalid access code. Try DOC001, DOC002, or DOC003");
+      toast.error("Invalid access code. Please check with your admin.");
+      return;
+    }
+    const registeredPhone =
+      (doctor as any).phone || (doctor as any).contactPhone || "";
+    if (!registeredPhone) {
+      toast.error("No phone number set for this doctor. Contact admin.");
+      return;
+    }
+    if (doctorPassword.trim() !== registeredPhone.trim()) {
+      toast.error("Incorrect password. Use your registered phone number.");
       return;
     }
     setLoading(true);
@@ -152,7 +208,7 @@ export default function LoginPage() {
                     Patient Portal
                   </h2>
                   <p className="text-teal-50 text-xs mt-0.5">
-                    Book appointments & track your token
+                    Book appointments &amp; track your token
                   </p>
                 </div>
                 {/* Right panel / Form */}
@@ -269,7 +325,7 @@ export default function LoginPage() {
                       <Input
                         id="doctor-code"
                         className="pl-9 font-mono tracking-widest"
-                        placeholder="DOC001"
+                        placeholder="DOC-00001"
                         value={doctorCode}
                         onChange={(e) => setDoctorCode(e.target.value)}
                         data-ocid="login.input"
@@ -281,7 +337,7 @@ export default function LoginPage() {
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="doctor-phone" className="text-gray-700">
-                      Phone Number
+                      Phone Number (Password)
                     </Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
@@ -289,13 +345,15 @@ export default function LoginPage() {
                         id="doctor-phone"
                         type="password"
                         className="pl-9"
-                        placeholder="Enter phone number"
+                        placeholder="Enter your registered phone number"
+                        value={doctorPassword}
+                        onChange={(e) => setDoctorPassword(e.target.value)}
                         data-ocid="login.input"
                       />
                     </div>
-                  </div>
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-700">
-                    Demo codes: DOC001, DOC002, DOC003
+                    <p className="text-xs text-gray-400">
+                      Your password is the phone number registered by the admin
+                    </p>
                   </div>
                   <Button
                     type="submit"

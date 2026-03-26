@@ -277,6 +277,14 @@ export default function AdminDoctors() {
         </Dialog>
       </div>
 
+      <div className="flex items-center gap-2 px-1 py-2 text-sm text-muted-foreground bg-muted/30 rounded-lg border border-border/50">
+        <span>✏️</span>
+        <span>
+          Click the edit icon in the Actions column to modify doctor details.
+          Changes are saved immediately.
+        </span>
+      </div>
+
       <div
         className="rounded-xl border border-border overflow-hidden bg-card"
         data-ocid="admin.table"
