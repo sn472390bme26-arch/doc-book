@@ -1,4 +1,4 @@
-import type { Doctor, Hospital } from "../types";
+import type { Doctor, Hospital, SessionTiming, SessionType } from "../types";
 
 export const ADMIN_CODE = "ADMIN-001";
 export const ADMIN_PASSWORD = "Admin@123";
@@ -139,6 +139,31 @@ export const SESSION_TIMES: Record<
   evening: { start: "18:00", end: "21:00", label: "Evening (6 PM – 9 PM)" },
 };
 
+/** Converts "HH:MM" (24h) to "H:MM AM/PM" */
+export function formatTime12h(time24: string): string {
+  const [hStr, mStr] = time24.split(":");
+  let h = Number.parseInt(hStr, 10);
+  const m = mStr ?? "00";
+  const ampm = h >= 12 ? "PM" : "AM";
+  if (h === 0) h = 12;
+  else if (h > 12) h -= 12;
+  return `${h}:${m} ${ampm}`;
+}
+
+/** Returns display label for a session, using doctor's custom timings if available */
+export function getSessionLabel(
+  session: SessionType,
+  customTimings?: Partial<Record<SessionType, SessionTiming>>,
+): string {
+  const base = SESSION_TIMES[session];
+  const custom = customTimings?.[session];
+  if (custom?.start && custom?.end) {
+    const name = session.charAt(0).toUpperCase() + session.slice(1);
+    return `${name} (${formatTime12h(custom.start)} – ${formatTime12h(custom.end)})`;
+  }
+  return base?.label ?? session;
+}
+
 export function makeSessionId(
   doctorId: string,
   date: string,
@@ -158,13 +183,18 @@ export function getAvailableDates(): string[] {
   return dates;
 }
 
-export function isSessionAvailable(date: string, session: string): boolean {
+export function isSessionAvailable(
+  date: string,
+  session: string,
+  customTimings?: Partial<Record<SessionType, SessionTiming>>,
+): boolean {
   const now = new Date();
   const today = now.toISOString().split("T")[0];
   if (date > today) return true;
   if (date < today) return false;
   // Same day - check if session ends in more than 10 min
-  const times = SESSION_TIMES[session];
+  const custom = customTimings?.[session as SessionType];
+  const times = custom ?? SESSION_TIMES[session];
   if (!times) return false;
   const [endH, endM] = times.end.split(":").map(Number);
   const endTime = new Date(now);

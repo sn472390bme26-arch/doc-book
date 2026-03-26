@@ -29,11 +29,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Building2, ImageIcon, Plus, Trash2, UploadCloud } from "lucide-react";
+import {
+  Building2,
+  Edit2,
+  ImageIcon,
+  Plus,
+  Trash2,
+  UploadCloud,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useStore } from "../../context/StoreContext";
 import type { Hospital } from "../../types";
+
+type EditHospitalForm = {
+  name: string;
+  area: string;
+  address: string;
+  phone: string;
+};
 
 export default function AdminHospitals() {
   const {
@@ -42,6 +56,7 @@ export default function AdminHospitals() {
     addHospital,
     deleteHospital,
     updateHospitalPhoto,
+    updateHospital,
   } = useStore();
   const [addOpen, setAddOpen] = useState(false);
   const [photoDialogId, setPhotoDialogId] = useState<string | null>(null);
@@ -49,6 +64,15 @@ export default function AdminHospitals() {
   const [selectedFileName, setSelectedFileName] = useState("");
   const [isDragOver, setIsDragOver] = useState(false);
   const [form, setForm] = useState({
+    name: "",
+    area: "",
+    address: "",
+    phone: "",
+  });
+
+  // Edit hospital state
+  const [editHospital, setEditHospital] = useState<Hospital | null>(null);
+  const [editForm, setEditForm] = useState<EditHospitalForm>({
     name: "",
     area: "",
     address: "",
@@ -98,6 +122,32 @@ export default function AdminHospitals() {
     setPhotoDialogId(null);
     setPhotoUrl("");
     setSelectedFileName("");
+  }
+
+  function openEditHospital(hospital: Hospital) {
+    setEditHospital(hospital);
+    setEditForm({
+      name: hospital.name,
+      area: hospital.area,
+      address: hospital.address ?? "",
+      phone: hospital.phone ?? "",
+    });
+  }
+
+  function handleEditHospital() {
+    if (!editHospital) return;
+    if (!editForm.name || !editForm.area) {
+      toast.error("Name and location are required");
+      return;
+    }
+    updateHospital(editHospital.id, {
+      name: editForm.name,
+      area: editForm.area,
+      address: editForm.address,
+      phone: editForm.phone,
+    });
+    toast.success("Hospital updated");
+    setEditHospital(null);
   }
 
   function readFileAsDataUrl(file: File) {
@@ -257,6 +307,14 @@ export default function AdminHospitals() {
                     <Button
                       variant="ghost"
                       size="sm"
+                      onClick={() => openEditHospital(hospital)}
+                      data-ocid="admin.edit_button"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => {
                         setPhotoDialogId(hospital.id);
                         setPhotoUrl(hospital.photoUrl ?? "");
@@ -308,6 +366,76 @@ export default function AdminHospitals() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Edit Hospital Dialog */}
+      <Dialog
+        open={!!editHospital}
+        onOpenChange={(open) => !open && setEditHospital(null)}
+      >
+        <DialogContent data-ocid="admin.dialog">
+          <DialogHeader>
+            <DialogTitle>Edit Hospital: {editHospital?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Hospital Name *</Label>
+              <Input
+                placeholder="e.g. City General Hospital"
+                value={editForm.name}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, name: e.target.value }))
+                }
+                data-ocid="admin.input"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Location / Area *</Label>
+              <Input
+                placeholder="e.g. Downtown"
+                value={editForm.area}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, area: e.target.value }))
+                }
+                data-ocid="admin.input"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Full Address</Label>
+              <Input
+                placeholder="e.g. 45 Central Avenue"
+                value={editForm.address}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, address: e.target.value }))
+                }
+                data-ocid="admin.input"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Phone</Label>
+              <Input
+                placeholder="e.g. +91 22 4567 8900"
+                value={editForm.phone}
+                onChange={(e) =>
+                  setEditForm((f) => ({ ...f, phone: e.target.value }))
+                }
+                data-ocid="admin.input"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditHospital(null)}
+              data-ocid="admin.cancel_button"
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleEditHospital} data-ocid="admin.save_button">
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Photo dialog */}
       <Dialog

@@ -14,6 +14,11 @@ export interface Hospital {
 
 export type SessionType = "morning" | "afternoon" | "evening";
 
+export interface SessionTiming {
+  start: string; // "HH:MM" 24h
+  end: string; // "HH:MM" 24h
+}
+
 export interface Doctor {
   id: string;
   hospitalId: string;
@@ -28,6 +33,11 @@ export interface Doctor {
   phone?: string;
   consultationFee?: number;
   isAvailable?: boolean;
+  contactPhone?: string;
+  yearsOfExperience?: string;
+  education?: string;
+  languages?: string[];
+  sessionTimings?: Partial<Record<SessionType, SessionTiming>>;
 }
 
 export type TokenStatus =

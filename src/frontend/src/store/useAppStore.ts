@@ -16,6 +16,8 @@ const LS_TOKEN_STATES = "meditoken_token_states";
 const LS_DOCTORS = "meditoken_doctors";
 const LS_HOSPITALS = "meditoken_hospitals";
 const LS_PATIENTS = "meditoken_patients";
+const LS_DELETED_DOCTORS = "meditoken_deleted_doctors";
+const LS_HOSPITALS_INITIALIZED = "meditoken_hospitals_initialized";
 
 function loadLS<T>(key: string, fallback: T): T {
   try {
@@ -30,10 +32,35 @@ function saveLS(key: string, val: unknown) {
   localStorage.setItem(key, JSON.stringify(val));
 }
 
-import {
-  DOCTORS as SEED_DOCTORS,
-  HOSPITALS as SEED_HOSPITALS,
-} from "../data/seed";
+import { DOCTORS as SEED_DOCTORS } from "../data/seed";
+
+function initDoctors(): Doctor[] {
+  const saved = loadLS<Doctor[]>(LS_DOCTORS, []);
+  const deletedIds = loadLS<string[]>(LS_DELETED_DOCTORS, []);
+  // Merge saved overrides with seed doctors, excluding deleted ones
+  const seedMerged = SEED_DOCTORS.filter(
+    (sd) => !deletedIds.includes(sd.id),
+  ).map((sd) => {
+    const override = saved.find((d) => d.id === sd.id);
+    return override ?? sd;
+  });
+  // Add any extra doctors not in seed
+  const extraDoctors = saved.filter(
+    (sd) => !SEED_DOCTORS.find((seed) => seed.id === sd.id),
+  );
+  return [...seedMerged, ...extraDoctors];
+}
+
+function initHospitals(): Hospital[] {
+  // Only admin-created hospitals persist. No sample data.
+  const initialized = loadLS<boolean>(LS_HOSPITALS_INITIALIZED, false);
+  if (!initialized) {
+    saveLS(LS_HOSPITALS_INITIALIZED, true);
+    saveLS(LS_HOSPITALS, []);
+    return [];
+  }
+  return loadLS<Hospital[]>(LS_HOSPITALS, []);
+}
 
 export function useAppStore() {
   const [user, setUser] = useState<AppUser | null>(() => loadLS(LS_USER, null));
@@ -43,32 +70,8 @@ export function useAppStore() {
   const [tokenStates, setTokenStates] = useState<
     Record<string, SessionTokenState>
   >(() => loadLS(LS_TOKEN_STATES, {}));
-  const [doctors, setDoctors] = useState<Doctor[]>(() => {
-    const saved = loadLS<Doctor[]>(LS_DOCTORS, []);
-    // Merge saved overrides with seed doctors
-    const seedMerged = SEED_DOCTORS.map((sd) => {
-      const override = saved.find((d) => d.id === sd.id);
-      return override ?? sd;
-    });
-    // Add any extra doctors not in seed
-    const extraDoctors = saved.filter(
-      (sd) => !SEED_DOCTORS.find((seed) => seed.id === sd.id),
-    );
-    return [...seedMerged, ...extraDoctors];
-  });
-  const [hospitals, setHospitals] = useState<Hospital[]>(() => {
-    const saved = loadLS<Hospital[]>(LS_HOSPITALS, []);
-    if (saved.length === 0) return SEED_HOSPITALS;
-    // Merge saved with seeds
-    const seedMerged = SEED_HOSPITALS.map((sh) => {
-      const override = saved.find((h) => h.id === sh.id);
-      return override ?? sh;
-    });
-    const extra = saved.filter(
-      (h) => !SEED_HOSPITALS.find((seed) => seed.id === h.id),
-    );
-    return [...seedMerged, ...extra];
-  });
+  const [doctors, setDoctors] = useState<Doctor[]>(initDoctors);
+  const [hospitals, setHospitals] = useState<Hospital[]>(initHospitals);
   const [patients, setPatients] = useState<PatientRecord[]>(() =>
     loadLS(LS_PATIENTS, []),
   );
@@ -77,7 +80,6 @@ export function useAppStore() {
   const login = useCallback((u: AppUser) => {
     setUser(u);
     saveLS(LS_USER, u);
-    // Register patient on login
     if (u.role === "patient") {
       setPatients((prev) => {
         if (prev.find((p) => p.id === u.id)) return prev;
@@ -367,22 +369,6 @@ export function useAppStore() {
   );
 
   const addDoctor = useCallback((d: Omit<Doctor, "id" | "code">): Doctor => {
-    // Generate sequential code
-    let maxNum = 0;
-    setDoctors((prev) => {
-      for (const doc of prev) {
-        if (doc.code) {
-          const match = doc.code.match(/DOC-?(\d+)/i);
-          if (match) {
-            const num = Number.parseInt(match[1], 10);
-            if (num > maxNum) maxNum = num;
-          }
-        }
-      }
-      return prev;
-    });
-    // Read current doctors synchronously by using a ref-style approach
-    // We'll compute max from the current state
     const savedDocs = loadLS<Doctor[]>(LS_DOCTORS, []);
     const allCodes = [...SEED_DOCTORS, ...savedDocs];
     let max = 0;
@@ -408,12 +394,19 @@ export function useAppStore() {
   }, []);
 
   const deleteDoctor = useCallback((doctorId: string) => {
+    // Track deleted seed doctors so they don't reappear on refresh
+    const isSeedDoctor = SEED_DOCTORS.some((sd) => sd.id === doctorId);
+    if (isSeedDoctor) {
+      const deletedIds = loadLS<string[]>(LS_DELETED_DOCTORS, []);
+      if (!deletedIds.includes(doctorId)) {
+        saveLS(LS_DELETED_DOCTORS, [...deletedIds, doctorId]);
+      }
+    }
     setDoctors((prev) => {
       const next = prev.filter((d) => d.id !== doctorId);
       saveLS(LS_DOCTORS, next);
       return next;
     });
-    // Cascade: cancel bookings for this doctor
     setBookings((prev) => {
       const next = prev.map((b) =>
         b.doctorId === doctorId ? { ...b, status: "cancelled" as const } : b,
@@ -421,7 +414,6 @@ export function useAppStore() {
       saveLS(LS_BOOKINGS, next);
       return next;
     });
-    // Remove tokenStates for this doctor's sessions
     setTokenStates((prev) => {
       const next = { ...prev };
       for (const key of Object.keys(next)) {
@@ -463,6 +455,17 @@ export function useAppStore() {
       return next;
     });
   }, []);
+
+  const updateHospital = useCallback(
+    (id: string, updates: Partial<Hospital>) => {
+      setHospitals((prev) => {
+        const next = prev.map((h) => (h.id === id ? { ...h, ...updates } : h));
+        saveLS(LS_HOSPITALS, next);
+        return next;
+      });
+    },
+    [],
+  );
 
   const getStats = useCallback(() => {
     const activeSessions = Object.values(tokenStates).filter(
@@ -519,6 +522,7 @@ export function useAppStore() {
     addHospital,
     deleteHospital,
     updateHospitalPhoto,
+    updateHospital,
     patients,
     getStats,
     notification,

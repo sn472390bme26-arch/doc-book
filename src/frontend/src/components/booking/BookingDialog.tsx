@@ -19,8 +19,8 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useStore } from "../../context/StoreContext";
 import {
-  SESSION_TIMES,
   getAvailableDates,
+  getSessionLabel,
   isSessionAvailable,
   makeSessionId,
 } from "../../data/seed";
@@ -41,7 +41,14 @@ export default function BookingDialog({
   open,
   onClose,
 }: Props) {
-  const { user, bookings, addBooking, bookToken } = useStore();
+  const {
+    user,
+    bookings,
+    addBooking,
+    bookToken,
+    tokenStates,
+    isSessionCancelled,
+  } = useStore();
   const [step, setStep] = useState<Step>("date");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedSession, setSelectedSession] = useState<SessionType | "">("");
@@ -190,52 +197,75 @@ export default function BookingDialog({
                 {formatDate(selectedDate)}
               </p>
               <div className="space-y-2">
-                {(Object.keys(SESSION_TIMES) as SessionType[]).map(
-                  (session) => {
-                    if (!doctor.sessions.includes(session)) return null;
-                    const available = isSessionAvailable(selectedDate, session);
-                    const booked = getBookedCount(selectedDate, session);
-                    const full = booked >= doctor.tokensPerSession;
-                    return (
-                      <button
-                        key={session}
-                        type="button"
-                        className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
-                          !available || full
-                            ? "border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed"
-                            : "border-gray-200 hover:border-teal-500 hover:bg-teal-50"
-                        }`}
-                        disabled={!available || full}
-                        onClick={() => handleSessionSelect(session)}
-                        data-ocid="booking.button"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-gray-400" />
-                            <span className="font-medium text-sm">
-                              {SESSION_TIMES[session].label}
-                            </span>
-                          </div>
-                          <span
-                            className={`text-xs px-2 py-0.5 rounded-full ${
-                              full
-                                ? "bg-red-100 text-red-600"
-                                : !available
-                                  ? "bg-gray-100 text-gray-500"
-                                  : "bg-teal-100 text-teal-700"
-                            }`}
-                          >
-                            {full
-                              ? "Full"
-                              : !available
-                                ? "Ended"
-                                : `${booked} / ${doctor.tokensPerSession} Booked`}
+                {(doctor.sessions as SessionType[]).map((session) => {
+                  const available = isSessionAvailable(
+                    selectedDate,
+                    session,
+                    doctor.sessionTimings,
+                  );
+                  const booked = getBookedCount(selectedDate, session);
+                  const full = booked >= doctor.tokensPerSession;
+                  const isCancelledSession = isSessionCancelled(
+                    doctor.id,
+                    selectedDate,
+                    session,
+                  );
+                  const isClosedSession =
+                    tokenStates[makeSessionId(doctor.id, selectedDate, session)]
+                      ?.isClosed === true;
+                  const isUnavailable =
+                    !available || full || isCancelledSession || isClosedSession;
+                  const sessionLabel = getSessionLabel(
+                    session,
+                    doctor.sessionTimings,
+                  );
+                  return (
+                    <button
+                      key={session}
+                      type="button"
+                      className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                        isUnavailable
+                          ? "border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed"
+                          : "border-gray-200 hover:border-teal-500 hover:bg-teal-50"
+                      }`}
+                      disabled={isUnavailable}
+                      onClick={() => handleSessionSelect(session)}
+                      data-ocid="booking.button"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-gray-400" />
+                          <span className="font-medium text-sm">
+                            {sessionLabel}
                           </span>
                         </div>
-                      </button>
-                    );
-                  },
-                )}
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full ${
+                            isCancelledSession
+                              ? "bg-red-100 text-red-600"
+                              : isClosedSession
+                                ? "bg-red-100 text-red-600"
+                                : full
+                                  ? "bg-red-100 text-red-600"
+                                  : !available
+                                    ? "bg-gray-100 text-gray-500"
+                                    : "bg-teal-100 text-teal-700"
+                          }`}
+                        >
+                          {isCancelledSession
+                            ? "Cancelled"
+                            : isClosedSession
+                              ? "Ended"
+                              : full
+                                ? "Full"
+                                : !available
+                                  ? "Unavailable"
+                                  : `${booked} / ${doctor.tokensPerSession} Booked`}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -253,7 +283,10 @@ export default function BookingDialog({
                   <p className="text-sm text-gray-600 mt-1">{doctor.name}</p>
                   <p className="text-xs text-gray-400">
                     {formatDate(selectedDate)} ·{" "}
-                    {SESSION_TIMES[selectedSession as SessionType]?.label}
+                    {getSessionLabel(
+                      selectedSession as SessionType,
+                      doctor.sessionTimings,
+                    )}
                   </p>
                   <div className="flex items-center gap-1 mt-2 text-gray-700 font-semibold">
                     <IndianRupee className="w-3.5 h-3.5 text-teal-600" />
@@ -342,7 +375,10 @@ export default function BookingDialog({
                 <div className="flex items-center gap-2 text-gray-500">
                   <Clock className="w-4 h-4 text-teal-500 shrink-0" />
                   <span>
-                    {SESSION_TIMES[selectedSession as SessionType]?.label}
+                    {getSessionLabel(
+                      selectedSession as SessionType,
+                      doctor.sessionTimings,
+                    )}
                   </span>
                 </div>
               </div>

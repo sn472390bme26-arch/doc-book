@@ -11,9 +11,9 @@ import { motion } from "motion/react";
 import { useState } from "react";
 import BookingDialog from "../../components/booking/BookingDialog";
 import { useStore } from "../../context/StoreContext";
-import { HOSPITALS, SESSION_TIMES } from "../../data/seed";
+import { getSessionLabel } from "../../data/seed";
 import { useRouter } from "../../router/RouterContext";
-import type { Doctor } from "../../types";
+import type { Doctor, SessionType } from "../../types";
 
 interface Props {
   id: string;
@@ -21,10 +21,10 @@ interface Props {
 
 export default function HospitalDoctorsPage({ id }: Props) {
   const { goBack } = useRouter();
-  const { doctors } = useStore();
+  const { hospitals, doctors } = useStore();
   const [bookingDoctor, setBookingDoctor] = useState<Doctor | null>(null);
 
-  const hospital = HOSPITALS.find((h) => h.id === id);
+  const hospital = hospitals.find((h) => h.id === id);
   const hospitalDoctors = doctors.filter((d) => d.hospitalId === id);
 
   if (!hospital)
@@ -42,16 +42,35 @@ export default function HospitalDoctorsPage({ id }: Props) {
       </Button>
 
       {/* Hospital header */}
-      <div
-        className={`h-32 rounded-2xl bg-gradient-to-br ${hospital.gradient} flex items-end p-6 mb-8`}
-      >
-        <div>
-          <h1 className="text-2xl font-bold text-white">{hospital.name}</h1>
-          <p className="text-white/80 text-sm">
-            {hospital.area} &middot; {hospitalDoctors.length} Doctors
-          </p>
+      {hospital.photoUrl ? (
+        <div
+          className="h-32 rounded-2xl relative overflow-hidden flex items-end p-6 mb-8"
+          style={{
+            backgroundImage: `url(${hospital.photoUrl})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+          <div className="relative">
+            <h1 className="text-2xl font-bold text-white">{hospital.name}</h1>
+            <p className="text-white/80 text-sm">
+              {hospital.area} &middot; {hospitalDoctors.length} Doctors
+            </p>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div
+          className={`h-32 rounded-2xl bg-gradient-to-br ${hospital.gradient} flex items-end p-6 mb-8`}
+        >
+          <div>
+            <h1 className="text-2xl font-bold text-white">{hospital.name}</h1>
+            <p className="text-white/80 text-sm">
+              {hospital.area} &middot; {hospitalDoctors.length} Doctors
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Doctors header */}
       <div className="flex justify-between items-center mb-4">
@@ -79,8 +98,18 @@ export default function HospitalDoctorsPage({ id }: Props) {
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
               <div className="flex items-start gap-4">
                 {/* Avatar */}
-                <div className="w-14 h-14 rounded-xl bg-teal-100 flex items-center justify-center shrink-0">
-                  <User className="w-7 h-7 text-teal-600" />
+                <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0">
+                  {doctor.photo ? (
+                    <img
+                      src={doctor.photo}
+                      alt={doctor.name}
+                      className="w-14 h-14 rounded-xl object-cover"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 rounded-xl bg-teal-100 flex items-center justify-center">
+                      <User className="w-7 h-7 text-teal-600" />
+                    </div>
+                  )}
                 </div>
                 {/* Info */}
                 <div className="flex-1 min-w-0">
@@ -96,7 +125,7 @@ export default function HospitalDoctorsPage({ id }: Props) {
                       per session
                     </span>
                   </div>
-                  {/* Session tags */}
+                  {/* Session tags with custom timings */}
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {doctor.sessions.length > 0 ? (
                       doctor.sessions.map((s) => (
@@ -104,7 +133,10 @@ export default function HospitalDoctorsPage({ id }: Props) {
                           key={s}
                           className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full"
                         >
-                          {SESSION_TIMES[s]?.label.split(" (")[0]}
+                          {getSessionLabel(
+                            s as SessionType,
+                            doctor.sessionTimings,
+                          )}
                         </span>
                       ))
                     ) : (

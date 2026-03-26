@@ -1,21 +1,22 @@
 # Doctor Booked
 
 ## Current State
-Full-stack appointment booking app (MediToken) with patient booking flow, doctor dashboard, token management, and admin panel.
+All data (hospitals, doctors, bookings, sessions) is stored in localStorage. However, the store on initialization always re-merges seed data (SEED_HOSPITALS, SEED_DOCTORS), causing deleted doctors and hospitals to reappear after a page refresh.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Nothing new functionally
+- `LS_DELETED_DOCTORS` localStorage key to track explicitly deleted seed doctor IDs
+- `LS_HOSPITALS_INITIALIZED` localStorage key to mark that hospitals have been seeded (empty) on first run
 
 ### Modify
-- Rename app from MediToken to Doctor Booked throughout UI
-- Redesign all pages to match uploaded design screenshots
+- `initDoctors()`: filter out seed doctors whose IDs are in the deleted list before merging
+- `initHospitals()`: on first load, save empty array and mark initialized; subsequent loads only use what is in localStorage — no seed hospitals ever injected
+- `deleteDoctor()`: when deleting a seed doctor, also persist its ID to `LS_DELETED_DOCTORS`
 
 ### Remove
-- MediToken branding everywhere
+- Automatic fallback to SEED_HOSPITALS when localStorage is empty
+- Import of SEED_HOSPITALS from seed.ts in the store
 
 ## Implementation Plan
-1. Replace all MediToken text with Doctor Booked (wordmark: black Doctor + teal Booked)
-2. Redesign all 10 screens to match uploaded screenshots
-3. Primary teal palette: #14B8A6
+1. Update `useAppStore.ts` with new init logic and deleteDoctor tracking — done.

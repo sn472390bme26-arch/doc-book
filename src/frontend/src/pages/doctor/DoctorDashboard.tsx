@@ -34,22 +34,33 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Activity,
   AlertTriangle,
+  BookOpen,
   CheckCircle,
   Clock,
+  Globe,
+  Languages,
+  Phone,
   Save,
+  Stethoscope,
+  Upload,
   User,
   XCircle,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useStore } from "../../context/StoreContext";
 import {
-  HOSPITALS,
   SESSION_TIMES,
   getAvailableDates,
+  getSessionLabel,
   makeSessionId,
 } from "../../data/seed";
-import type { PrioritySlotState, SessionType, TokenStatus } from "../../types";
+import type {
+  PrioritySlotState,
+  SessionTiming,
+  SessionType,
+  TokenStatus,
+} from "../../types";
 
 const TOKEN_CLASSES: Record<string, string> = {
   white: "token-white cursor-pointer hover:opacity-80",
@@ -67,6 +78,12 @@ const PRIORITY_STATUS_CLASSES: Record<string, string> = {
   completed: "bg-green-50 text-green-700 border-green-200 cursor-pointer",
 };
 
+const DEFAULT_TIMINGS: Record<SessionType, SessionTiming> = {
+  morning: { start: "09:00", end: "12:00" },
+  afternoon: { start: "14:00", end: "17:00" },
+  evening: { start: "18:00", end: "21:00" },
+};
+
 export default function DoctorDashboard() {
   const {
     user,
@@ -79,6 +96,7 @@ export default function DoctorDashboard() {
     setPrioritySlot,
     cancelSession,
     isSessionCancelled,
+    tokenStates,
   } = useStore();
 
   const doctorUser = user as { doctorId: string; code: string };
@@ -91,7 +109,17 @@ export default function DoctorDashboard() {
     price: String(doctor?.price ?? 0),
     tokensPerSession: String(doctor?.tokensPerSession ?? 20),
     sessions: doctor?.sessions ?? ([] as SessionType[]),
+    contactPhone: doctor?.contactPhone ?? "",
+    yearsOfExperience: doctor?.yearsOfExperience ?? "",
+    education: doctor?.education ?? "",
+    languages: doctor?.languages ?? ([] as string[]),
+    sessionTimings: (doctor?.sessionTimings ?? {}) as Partial<
+      Record<SessionType, SessionTiming>
+    >,
   });
+
+  const [langInput, setLangInput] = useState("");
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const today = new Date().toISOString().split("T")[0];
   const [regDate, setRegDate] = useState(today);
@@ -103,6 +131,16 @@ export default function DoctorDashboard() {
     index: number;
     slot: PrioritySlotState | null;
   }>({ open: false, index: 0, slot: null });
+
+  const visibleSessions = useMemo(() => {
+    if (!doctor) return [];
+    return doctor.sessions.filter((s) => {
+      if (isSessionCancelled(doctor.id, regDate, s)) return false;
+      const sid = makeSessionId(doctor.id, regDate, s);
+      if (tokenStates[sid]?.isClosed === true) return false;
+      return true;
+    });
+  }, [doctor, regDate, tokenStates, isSessionCancelled]);
 
   const availableDates = useMemo(() => getAvailableDates(), []);
 
@@ -125,8 +163,26 @@ export default function DoctorDashboard() {
       price: Number(profileForm.price),
       tokensPerSession: Number(profileForm.tokensPerSession),
       sessions: profileForm.sessions,
+      contactPhone: profileForm.contactPhone,
+      yearsOfExperience: profileForm.yearsOfExperience,
+      education: profileForm.education,
+      languages: profileForm.languages,
+      consultationFee: Number(profileForm.price),
+      sessionTimings: profileForm.sessionTimings,
     });
     toast.success("Profile updated successfully");
+  }
+
+  function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result as string;
+      updateDoctor(doctor.id, { photo: base64 });
+      toast.success("Photo updated successfully");
+    };
+    reader.readAsDataURL(file);
   }
 
   function toggleSession(s: SessionType) {
@@ -135,6 +191,44 @@ export default function DoctorDashboard() {
       sessions: prev.sessions.includes(s)
         ? prev.sessions.filter((x) => x !== s)
         : [...prev.sessions, s],
+    }));
+  }
+
+  function updateSessionTiming(
+    session: SessionType,
+    field: "start" | "end",
+    value: string,
+  ) {
+    setProfileForm((prev) => {
+      const existing = prev.sessionTimings[session] ?? DEFAULT_TIMINGS[session];
+      return {
+        ...prev,
+        sessionTimings: {
+          ...prev.sessionTimings,
+          [session]: { ...existing, [field]: value },
+        },
+      };
+    });
+  }
+
+  function addLanguage() {
+    const lang = langInput.trim();
+    if (!lang) return;
+    if (profileForm.languages.includes(lang)) {
+      setLangInput("");
+      return;
+    }
+    setProfileForm((prev) => ({
+      ...prev,
+      languages: [...prev.languages, lang],
+    }));
+    setLangInput("");
+  }
+
+  function removeLanguage(lang: string) {
+    setProfileForm((prev) => ({
+      ...prev,
+      languages: prev.languages.filter((l) => l !== lang),
     }));
   }
 
@@ -156,11 +250,15 @@ export default function DoctorDashboard() {
     toast.success(
       "Session closed. Refunds will be processed for unvisited tokens.",
     );
+    const next = visibleSessions.find((s) => s !== regSession);
+    if (next) setRegSession(next);
   }
 
   function handleCancelSession() {
     cancelSession(doctor.id, regDate, regSession);
     toast.success("Session cancelled. Patients will be notified.");
+    const next = visibleSessions.find((s) => s !== regSession);
+    if (next) setRegSession(next);
   }
 
   function openPriorityDialog(slotIndex: number) {
@@ -256,6 +354,8 @@ export default function DoctorDashboard() {
     return elements;
   }
 
+  const currentDoctor = doctors.find((d) => d.id === doctorUser.doctorId);
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8">
       {/* Title card */}
@@ -265,7 +365,7 @@ export default function DoctorDashboard() {
         </h2>
         <p className="text-gray-500 text-sm mt-1">
           Manage live patient queue — {doctor?.name} ·{" "}
-          {HOSPITALS.find((h) => h.id === doctor?.hospitalId)?.name}
+          {currentDoctor?.specialty}
         </p>
       </div>
 
@@ -326,9 +426,9 @@ export default function DoctorDashboard() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {doctor?.sessions.map((s) => (
+                        {visibleSessions.map((s) => (
                           <SelectItem key={s} value={s}>
-                            {SESSION_TIMES[s].label}
+                            {getSessionLabel(s, doctor?.sessionTimings)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -359,7 +459,7 @@ export default function DoctorDashboard() {
                 <div className="flex flex-col gap-3">
                   <CardTitle className="text-base">
                     <Clock className="w-4 h-4 inline mr-2 text-teal-500" />
-                    {SESSION_TIMES[regSession]?.label} —{" "}
+                    {getSessionLabel(regSession, doctor?.sessionTimings)} —{" "}
                     {new Date(`${regDate}T00:00:00`).toLocaleDateString(
                       "en-IN",
                       {
@@ -439,8 +539,12 @@ export default function DoctorDashboard() {
                             </AlertDialogTitle>
                             <AlertDialogDescription>
                               This will cancel the{" "}
-                              {SESSION_TIMES[regSession]?.label} session on{" "}
-                              {regDate}. All booked patients will be refunded.
+                              {getSessionLabel(
+                                regSession,
+                                doctor?.sessionTimings,
+                              )}{" "}
+                              session on {regDate}. All booked patients will be
+                              refunded.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -449,7 +553,7 @@ export default function DoctorDashboard() {
                             </AlertDialogCancel>
                             <AlertDialogAction
                               onClick={handleCancelSession}
-                              className="bg-destructive text-destructive-foreground"
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                               data-ocid="tokens.confirm_button"
                             >
                               Cancel Session
@@ -463,29 +567,21 @@ export default function DoctorDashboard() {
               </CardHeader>
               <CardContent>
                 {cancelled ? (
-                  <div
-                    className="text-center py-10 text-gray-400"
-                    data-ocid="tokens.empty_state"
-                  >
-                    <XCircle className="w-10 h-10 mx-auto mb-3 text-red-400 opacity-50" />
-                    <p className="font-medium">
-                      This session has been cancelled
-                    </p>
-                    <p className="text-sm mt-1">
-                      Patients have been notified and refunds processed
+                  <div className="py-10 text-center">
+                    <AlertTriangle className="w-8 h-8 text-red-400 mx-auto mb-2" />
+                    <p className="text-gray-500 text-sm">
+                      This session has been cancelled.
                     </p>
                   </div>
                 ) : (
                   <>
-                    {/* Legend */}
-                    <div className="flex flex-wrap gap-3 sm:gap-4 mb-4">
+                    <div className="flex flex-wrap gap-3 mb-4">
                       {(
                         [
-                          ["#e2e8f0", "Available"],
+                          ["#fff", "Available"],
                           ["#ef4444", "Booked"],
                           ["#f97316", "Ongoing"],
-                          ["#fbbf24", "Next Up"],
-                          ["#22c55e", "Completed"],
+                          ["#22c55e", "Done"],
                         ] as [string, string][]
                       ).map(([color, label]) => (
                         <div key={label} className="flex items-center gap-1.5">
@@ -509,14 +605,75 @@ export default function DoctorDashboard() {
 
         {/* Profile Tab */}
         <TabsContent value="profile">
-          <Card className="border border-gray-100 shadow-sm">
-            <CardHeader>
-              <CardTitle>My Profile</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="space-y-2">
-                  <Label htmlFor="doc-name">Full Name</Label>
+          <div className="space-y-4">
+            {/* PHOTO IDENTITY */}
+            <div className="border border-gray-200 rounded-2xl p-5 bg-white shadow-sm">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+                Photo Identity
+              </p>
+              <div className="flex items-center gap-5">
+                {/* Avatar */}
+                <div className="relative shrink-0">
+                  {currentDoctor?.photo ? (
+                    <img
+                      src={currentDoctor.photo}
+                      alt={currentDoctor.name}
+                      className="w-20 h-20 rounded-2xl object-cover border-2 border-teal-100"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-2xl bg-teal-100 flex items-center justify-center border-2 border-teal-200">
+                      <User className="w-9 h-9 text-teal-600" />
+                    </div>
+                  )}
+                </div>
+                {/* Identity info */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-lg font-bold text-gray-900 truncate">
+                    {currentDoctor?.name || profileForm.name || "Doctor Name"}
+                  </p>
+                  <p className="text-sm text-teal-600 font-medium mt-0.5">
+                    {currentDoctor?.specialty ||
+                      profileForm.specialty ||
+                      "Specialty"}
+                  </p>
+                  <span className="inline-block mt-1.5 text-xs bg-gray-100 text-gray-500 px-2.5 py-1 rounded-full font-mono">
+                    Code: {doctorUser.code}
+                  </span>
+                  <div className="mt-2">
+                    <input
+                      ref={photoInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handlePhotoUpload}
+                    />
+                    <button
+                      type="button"
+                      className="flex items-center gap-1.5 text-sm text-teal-600 hover:text-teal-700 font-medium transition-colors"
+                      onClick={() => photoInputRef.current?.click()}
+                      data-ocid="profile.upload_button"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      Upload new photo
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* PERSONAL DETAILS */}
+            <div className="border border-gray-200 rounded-2xl p-5 bg-white shadow-sm">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+                Personal Details
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="doc-name"
+                    className="flex items-center gap-1.5 text-sm font-medium"
+                  >
+                    <User className="w-3.5 h-3.5 text-gray-400" /> Full Name
+                  </Label>
                   <Input
                     id="doc-name"
                     value={profileForm.name}
@@ -526,8 +683,14 @@ export default function DoctorDashboard() {
                     data-ocid="profile.input"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="doc-specialty">Specialty</Label>
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="doc-specialty"
+                    className="flex items-center gap-1.5 text-sm font-medium"
+                  >
+                    <Stethoscope className="w-3.5 h-3.5 text-gray-400" />{" "}
+                    Specialty
+                  </Label>
                   <Input
                     id="doc-specialty"
                     value={profileForm.specialty}
@@ -540,8 +703,153 @@ export default function DoctorDashboard() {
                     data-ocid="profile.input"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="doc-price">Price per Session (₹)</Label>
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="doc-phone"
+                    className="flex items-center gap-1.5 text-sm font-medium"
+                  >
+                    <Phone className="w-3.5 h-3.5 text-gray-400" /> Contact
+                    Phone
+                  </Label>
+                  <Input
+                    id="doc-phone"
+                    value={profileForm.contactPhone}
+                    placeholder="e.g. +91 98765 43210"
+                    onChange={(e) =>
+                      setProfileForm((p) => ({
+                        ...p,
+                        contactPhone: e.target.value,
+                      }))
+                    }
+                    data-ocid="profile.input"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="doc-exp"
+                    className="flex items-center gap-1.5 text-sm font-medium"
+                  >
+                    <Clock className="w-3.5 h-3.5 text-gray-400" /> Years of
+                    Experience
+                  </Label>
+                  <Input
+                    id="doc-exp"
+                    value={profileForm.yearsOfExperience}
+                    placeholder="e.g. 12"
+                    onChange={(e) =>
+                      setProfileForm((p) => ({
+                        ...p,
+                        yearsOfExperience: e.target.value,
+                      }))
+                    }
+                    data-ocid="profile.input"
+                  />
+                </div>
+                <div className="space-y-1.5 md:col-span-2">
+                  <Label
+                    htmlFor="doc-edu"
+                    className="flex items-center gap-1.5 text-sm font-medium"
+                  >
+                    <BookOpen className="w-3.5 h-3.5 text-gray-400" /> Education
+                    & Qualifications
+                  </Label>
+                  <Input
+                    id="doc-edu"
+                    value={profileForm.education}
+                    placeholder="e.g. MBBS, MD (Cardiology) — AIIMS Delhi"
+                    onChange={(e) =>
+                      setProfileForm((p) => ({
+                        ...p,
+                        education: e.target.value,
+                      }))
+                    }
+                    data-ocid="profile.input"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* ABOUT */}
+            <div className="border border-gray-200 rounded-2xl p-5 bg-white shadow-sm">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+                About
+              </p>
+              <div className="space-y-1.5">
+                <Label htmlFor="doc-bio" className="text-sm font-medium">
+                  Bio / About the Doctor
+                </Label>
+                <Textarea
+                  id="doc-bio"
+                  rows={4}
+                  value={profileForm.bio}
+                  placeholder="Brief description visible to patients — areas of expertise, approach to care, etc."
+                  onChange={(e) =>
+                    setProfileForm((p) => ({ ...p, bio: e.target.value }))
+                  }
+                  data-ocid="profile.textarea"
+                />
+              </div>
+            </div>
+
+            {/* LANGUAGES SPOKEN */}
+            <div className="border border-gray-200 rounded-2xl p-5 bg-white shadow-sm">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+                Languages Spoken
+              </p>
+              <div className="flex gap-2 mb-3">
+                <div className="relative flex-1">
+                  <Languages className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    value={langInput}
+                    placeholder="e.g. English, Hindi, Tamil..."
+                    className="pl-9"
+                    onChange={(e) => setLangInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && addLanguage()}
+                    data-ocid="profile.input"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="bg-teal-500 hover:bg-teal-600 text-white px-4"
+                  onClick={addLanguage}
+                  data-ocid="profile.secondary_button"
+                >
+                  Add
+                </Button>
+              </div>
+              {profileForm.languages.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {profileForm.languages.map((lang) => (
+                    <span
+                      key={lang}
+                      className="flex items-center gap-1.5 bg-teal-50 text-teal-700 border border-teal-200 text-sm px-3 py-1 rounded-full"
+                    >
+                      <Globe className="w-3 h-3" />
+                      {lang}
+                      <button
+                        type="button"
+                        className="ml-0.5 text-teal-400 hover:text-teal-700 transition-colors"
+                        onClick={() => removeLanguage(lang)}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* SESSION SETTINGS */}
+            <div className="border border-gray-200 rounded-2xl p-5 bg-white shadow-sm">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+                Session Settings
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                <div className="space-y-1.5">
+                  <Label htmlFor="doc-price" className="text-sm font-medium">
+                    Consultation Fee (₹)
+                  </Label>
                   <Input
                     id="doc-price"
                     type="number"
@@ -552,8 +860,10 @@ export default function DoctorDashboard() {
                     data-ocid="profile.input"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="doc-tokens">Tokens per Session</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="doc-tokens" className="text-sm font-medium">
+                    Tokens Per Session
+                  </Label>
                   <Input
                     id="doc-tokens"
                     type="number"
@@ -567,49 +877,105 @@ export default function DoctorDashboard() {
                     data-ocid="profile.input"
                   />
                 </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="doc-bio">Bio</Label>
-                  <Textarea
-                    id="doc-bio"
-                    rows={3}
-                    value={profileForm.bio}
-                    onChange={(e) =>
-                      setProfileForm((p) => ({ ...p, bio: e.target.value }))
-                    }
-                    data-ocid="profile.textarea"
-                  />
-                </div>
-                <div className="space-y-3">
-                  <Label>Available Sessions</Label>
-                  {(["morning", "afternoon", "evening"] as SessionType[]).map(
-                    (s) => (
-                      <div key={s} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`sess_${s}`}
-                          checked={profileForm.sessions.includes(s)}
-                          onCheckedChange={() => toggleSession(s)}
-                          data-ocid="profile.checkbox"
-                        />
-                        <Label
-                          htmlFor={`sess_${s}`}
-                          className="font-normal cursor-pointer"
-                        >
-                          {SESSION_TIMES[s].label}
-                        </Label>
-                      </div>
-                    ),
-                  )}
-                </div>
               </div>
+
+              {/* Session toggles + custom timings */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">
+                  Available Sessions & Timings
+                </Label>
+                <p className="text-xs text-gray-400">
+                  Enable a session and set your own start/end time. Patients
+                  will see your custom timings when booking.
+                </p>
+                {(["morning", "afternoon", "evening"] as SessionType[]).map(
+                  (s) => {
+                    const isEnabled = profileForm.sessions.includes(s);
+                    const timing =
+                      profileForm.sessionTimings[s] ?? DEFAULT_TIMINGS[s];
+                    const sessionName = s.charAt(0).toUpperCase() + s.slice(1);
+                    return (
+                      <div
+                        key={s}
+                        className={`rounded-xl border-2 p-4 transition-colors ${
+                          isEnabled
+                            ? "border-teal-200 bg-teal-50/50"
+                            : "border-gray-100 bg-gray-50"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-3">
+                          <Checkbox
+                            id={`sess_${s}`}
+                            checked={isEnabled}
+                            onCheckedChange={() => toggleSession(s)}
+                            data-ocid="profile.checkbox"
+                          />
+                          <Label
+                            htmlFor={`sess_${s}`}
+                            className="font-semibold cursor-pointer text-sm"
+                          >
+                            {sessionName} Session
+                          </Label>
+                          {isEnabled && (
+                            <span className="ml-auto text-xs bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full font-medium">
+                              Active
+                            </span>
+                          )}
+                        </div>
+                        {isEnabled && (
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <Label className="text-xs text-gray-500 font-medium">
+                                Start Time
+                              </Label>
+                              <Input
+                                type="time"
+                                value={timing.start}
+                                onChange={(e) =>
+                                  updateSessionTiming(
+                                    s,
+                                    "start",
+                                    e.target.value,
+                                  )
+                                }
+                                className="text-sm"
+                                data-ocid="profile.input"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs text-gray-500 font-medium">
+                                End Time
+                              </Label>
+                              <Input
+                                type="time"
+                                value={timing.end}
+                                onChange={(e) =>
+                                  updateSessionTiming(s, "end", e.target.value)
+                                }
+                                className="text-sm"
+                                data-ocid="profile.input"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  },
+                )}
+              </div>
+            </div>
+
+            {/* Save Button */}
+            <div className="flex justify-end pb-2">
               <Button
-                className="mt-6 bg-teal-500 hover:bg-teal-600 w-full sm:w-auto"
+                className="bg-teal-500 hover:bg-teal-600 text-white px-8"
                 onClick={handleSaveProfile}
                 data-ocid="profile.save_button"
               >
                 <Save className="w-4 h-4 mr-2" /> Save Profile
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
 
