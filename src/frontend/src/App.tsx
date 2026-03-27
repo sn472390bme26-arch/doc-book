@@ -1,6 +1,6 @@
 import { Toaster } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Calendar, Clock, MapPin, Stethoscope } from "lucide-react";
+import { Calendar, Clock, MapPin } from "lucide-react";
 import { motion } from "motion/react";
 import TopNav from "./components/layout/TopNav";
 import { StoreProvider, useStore } from "./context/StoreContext";
@@ -22,9 +22,11 @@ function LandingPage() {
       <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-full bg-teal-500 flex items-center justify-center shrink-0">
-              <Stethoscope className="w-5 h-5 text-white" />
-            </div>
+            <img
+              src="/assets/uploads/final_logo_page-0001-019d2d83-8a36-752f-9b4e-dec5e9e187fd-1.jpg"
+              alt="Doctor Booked Logo"
+              className="w-9 h-9 rounded-full object-contain bg-white"
+            />
             <span>
               <span className="font-bold text-gray-900">Doctor</span>
               <span className="font-bold text-teal-500"> Booked</span>

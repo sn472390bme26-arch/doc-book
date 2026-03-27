@@ -1,10 +1,11 @@
 import {
+  Activity,
   ArrowLeft,
   Calendar,
   CheckCircle,
   Clock,
-  Stethoscope,
 } from "lucide-react";
+import { useEffect } from "react";
 import { useStore } from "../../context/StoreContext";
 import { SESSION_TIMES } from "../../data/seed";
 import { useRouter } from "../../router/RouterContext";
@@ -35,7 +36,12 @@ interface Props {
 
 export default function TokenTrackerPage({ sessionId, tokenNumber }: Props) {
   const { goBack } = useRouter();
-  const { tokenStates, bookings, doctors } = useStore();
+  const { tokenStates, bookings, doctors, refreshFromStorage } = useStore();
+
+  useEffect(() => {
+    const id = setInterval(refreshFromStorage, 5000);
+    return () => clearInterval(id);
+  }, [refreshFromStorage]);
 
   const booking = bookings.find(
     (b) => b.sessionId === sessionId && b.tokenNumber === tokenNumber,
@@ -119,11 +125,11 @@ export default function TokenTrackerPage({ sessionId, tokenNumber }: Props) {
         {/* Top row */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <span className="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+            <span className="animate-pulse bg-green-500 text-white text-xs font-bold px-2 py-1 rounded-full">
               LIVE
             </span>
             <span className="text-xs text-gray-400">
-              Updates every 4 seconds
+              Updates every 5 seconds
             </span>
           </div>
           <button
@@ -142,7 +148,7 @@ export default function TokenTrackerPage({ sessionId, tokenNumber }: Props) {
             {booking && (
               <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-gray-500">
                 <span className="flex items-center gap-1">
-                  <Stethoscope className="w-3.5 h-3.5" />
+                  <Activity className="w-3.5 h-3.5" />
                   {booking.doctorName}
                 </span>
                 <span className="flex items-center gap-1">
@@ -201,7 +207,7 @@ export default function TokenTrackerPage({ sessionId, tokenNumber }: Props) {
             label: "Now Seeing",
           },
           {
-            icon: <Stethoscope className="w-4 h-4 text-blue-600" />,
+            icon: <Activity className="w-4 h-4 text-blue-600" />,
             bg: "bg-blue-100",
             value: tokensAhead,
             label: "Tokens Ahead",

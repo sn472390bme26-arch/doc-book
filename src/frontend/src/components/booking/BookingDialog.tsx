@@ -6,6 +6,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Activity } from "lucide-react";
 import {
   Calendar,
   CheckCircle2,
@@ -15,7 +16,6 @@ import {
   IndianRupee,
   Loader2,
   MapPin,
-  Stethoscope,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -408,7 +408,7 @@ export default function BookingDialog({
               <p className="text-6xl font-bold text-gray-900">{tokenNumber}</p>
               <div className="grid grid-cols-2 gap-3 text-sm text-left mt-4">
                 <div className="flex items-center gap-2 text-gray-500">
-                  <Stethoscope className="w-4 h-4 text-teal-500 shrink-0" />
+                  <Activity className="w-4 h-4 text-teal-500 shrink-0" />
                   <span>{doctor.name}</span>
                 </div>
                 <div className="flex items-center gap-2 text-gray-500">

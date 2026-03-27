@@ -11,7 +11,6 @@ import {
   Lock,
   Mail,
   ShieldCheck,
-  Stethoscope,
   User,
 } from "lucide-react";
 import { useState } from "react";
@@ -204,9 +203,11 @@ export default function LoginPage() {
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center shrink-0">
-            <Stethoscope className="w-4 h-4 text-white" />
-          </div>
+          <img
+            src="/assets/uploads/final_logo_page-0001-019d2d83-8a36-752f-9b4e-dec5e9e187fd-1.jpg"
+            alt="Doctor Booked Logo"
+            className="w-8 h-8 rounded-full object-cover shrink-0"
+          />
           <span className="text-base">
             <span className="font-bold text-gray-900">Doctor</span>
             <span className="font-bold text-teal-500"> Booked</span>
@@ -470,8 +471,12 @@ export default function LoginPage() {
             <TabsContent value="doctor">
               <div className="max-w-sm mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
                 <div className="flex flex-col items-center mb-6">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                    <Stethoscope className="w-8 h-8 text-blue-600" />
+                  <div className="w-16 h-16 rounded-full overflow-hidden mb-4">
+                    <img
+                      src="/assets/uploads/final_logo_page-0001-019d2d83-8a36-752f-9b4e-dec5e9e187fd-1.jpg"
+                      alt="Doctor Booked Logo"
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                   <h3 className="text-xl font-bold text-gray-900">
                     Doctor Login

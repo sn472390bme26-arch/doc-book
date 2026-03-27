@@ -1,12 +1,11 @@
 import {
-  Activity,
   BookOpen,
   Building2,
   CalendarCheck,
   LayoutDashboard,
   LogOut,
   Menu,
-  Stethoscope,
+  UserCog,
   Users,
   X,
 } from "lucide-react";
@@ -23,7 +22,7 @@ import AdminSessions from "./AdminSessions";
 const NAV_ITEMS = [
   { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { path: "/admin/hospitals", label: "Hospitals", icon: Building2 },
-  { path: "/admin/doctors", label: "Doctors", icon: Stethoscope },
+  { path: "/admin/doctors", label: "Doctors", icon: UserCog },
   { path: "/admin/patients", label: "Patients", icon: Users },
   { path: "/admin/sessions", label: "Sessions", icon: CalendarCheck },
   { path: "/admin/bookings", label: "Bookings", icon: BookOpen },
@@ -60,9 +59,11 @@ export default function AdminPanel() {
       <aside className="hidden md:flex w-64 bg-admin-sidebar text-admin-sidebar-fg flex-col shrink-0">
         <div className="px-6 py-5 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
-              <Activity className="w-5 h-5 text-white" />
-            </div>
+            <img
+              src="/assets/uploads/final_logo_page-0001-019d2d83-8a36-752f-9b4e-dec5e9e187fd-1.jpg"
+              alt="Doctor Booked Logo"
+              className="w-9 h-9 rounded-lg object-contain bg-white"
+            />
             <div>
               <p className="font-bold text-white text-sm">Doctor Booked</p>
               <p className="text-[10px] text-white/50 uppercase tracking-wider">
@@ -112,9 +113,11 @@ export default function AdminPanel() {
       {/* Mobile Top Bar */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-40 bg-admin-sidebar text-white flex items-center justify-between px-4 py-3 border-b border-white/10">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-            <Activity className="w-4 h-4 text-white" />
-          </div>
+          <img
+            src="/assets/uploads/final_logo_page-0001-019d2d83-8a36-752f-9b4e-dec5e9e187fd-1.jpg"
+            alt="Doctor Booked Logo"
+            className="w-7 h-7 rounded-lg object-contain bg-white"
+          />
           <span className="font-bold text-sm">Doctor Booked</span>
         </div>
         <div className="flex items-center gap-2">
@@ -144,9 +147,11 @@ export default function AdminPanel() {
           <div className="md:hidden fixed left-0 top-0 bottom-0 w-72 z-50 bg-admin-sidebar flex flex-col">
             <div className="px-6 py-5 border-b border-white/10 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
-                  <Activity className="w-5 h-5 text-white" />
-                </div>
+                <img
+                  src="/assets/uploads/final_logo_page-0001-019d2d83-8a36-752f-9b4e-dec5e9e187fd-1.jpg"
+                  alt="Doctor Booked Logo"
+                  className="w-9 h-9 rounded-lg object-contain bg-white"
+                />
                 <div>
                   <p className="font-bold text-white text-sm">Doctor Booked</p>
                   <p className="text-[10px] text-white/50 uppercase tracking-wider">

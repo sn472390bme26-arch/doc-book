@@ -552,6 +552,11 @@ export function useAppStore() {
     [bookings],
   );
 
+  const refreshFromStorage = useCallback(() => {
+    setTokenStates(loadLS(LS_TOKEN_STATES, {}));
+    setBookings(loadLS(LS_BOOKINGS, []));
+  }, []);
+
   return {
     user,
     login,
@@ -587,6 +592,7 @@ export function useAppStore() {
     getPatientCredentials,
     getPatientNameIndex,
     savePatientCredential,
+    refreshFromStorage,
   };
 }
 

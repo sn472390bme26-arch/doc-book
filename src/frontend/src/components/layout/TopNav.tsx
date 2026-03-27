@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { BookOpen, Hospital, LogOut, Stethoscope, User } from "lucide-react";
+import { BookOpen, Hospital, LogOut, User } from "lucide-react";
 import { useStore } from "../../context/StoreContext";
 import { DOCTORS } from "../../data/seed";
 import { useRouter } from "../../router/RouterContext";
@@ -31,9 +31,11 @@ export default function TopNav() {
           }
           data-ocid="nav.link"
         >
-          <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center">
-            <Stethoscope className="w-4 h-4 text-white" />
-          </div>
+          <img
+            src="/assets/uploads/final_logo_page-0001-019d2d83-8a36-752f-9b4e-dec5e9e187fd-1.jpg"
+            alt="Doctor Booked Logo"
+            className="w-8 h-8 rounded-full object-cover"
+          />
           <span className="text-sm sm:text-base hidden xs:inline">
             <span className="font-bold text-gray-900">Doctor</span>
             <span className="font-bold text-teal-500"> Booked</span>

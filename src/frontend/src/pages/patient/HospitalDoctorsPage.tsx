@@ -1,11 +1,6 @@
 import { Button } from "@/components/ui/button";
-import {
-  ArrowLeft,
-  Calendar,
-  ChevronRight,
-  Stethoscope,
-  User,
-} from "lucide-react";
+import { Activity } from "lucide-react";
+import { ArrowLeft, Calendar, ChevronRight, User } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 import BookingDialog from "../../components/booking/BookingDialog";
@@ -114,7 +109,7 @@ export default function HospitalDoctorsPage({ id }: Props) {
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-gray-900">{doctor.name}</p>
                   <div className="flex items-center gap-1.5 text-sm text-gray-500 mt-0.5">
-                    <Stethoscope className="w-3.5 h-3.5" />
+                    <Activity className="w-3.5 h-3.5" />
                     {doctor.specialty}
                   </div>
                   {/* Session tags with custom timings */}

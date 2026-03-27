@@ -45,7 +45,6 @@ import {
   Phone,
   Save,
   SkipForward,
-  Stethoscope,
   Upload,
   User,
   XCircle,
@@ -812,8 +811,7 @@ export default function DoctorDashboard() {
                     htmlFor="doc-specialty"
                     className="flex items-center gap-1.5 text-sm font-medium"
                   >
-                    <Stethoscope className="w-3.5 h-3.5 text-gray-400" />{" "}
-                    Specialty
+                    <Activity className="w-3.5 h-3.5 text-gray-400" /> Specialty
                   </Label>
                   <Input
                     id="doc-specialty"

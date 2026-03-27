@@ -5,7 +5,7 @@ import {
   Building2,
   CalendarCheck,
   RefreshCw,
-  Stethoscope,
+  UserCog,
   Users,
 } from "lucide-react";
 import { useState } from "react";
@@ -22,7 +22,7 @@ const STAT_CARD_DEFS = [
   {
     label: "Total Doctors",
     key: "totalDoctors" as const,
-    icon: Stethoscope,
+    icon: UserCog,
     color: "text-emerald-500",
     bg: "bg-emerald-50",
   },
